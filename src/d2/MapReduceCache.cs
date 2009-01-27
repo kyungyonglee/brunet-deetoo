@@ -22,6 +22,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 using System;
 using System.Collections;
 using System.Collections.Specialized;
+using Brunet;
 
 namespace Brunet.Deetoo {
   /**
@@ -54,8 +55,9 @@ namespace Brunet.Deetoo {
     
     public override object Reduce(object reduce_arg, 
                                   object current_result, RpcResult child_rpc,
-                                  ref bool done) {
+                                  out bool done) {
 
+      done = false;
       ISender child_sender = child_rpc.ResultSender;
       //the following can throw an exception, will be handled by the framework
       object child_result = child_rpc.Result;

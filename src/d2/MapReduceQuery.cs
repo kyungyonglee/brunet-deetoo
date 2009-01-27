@@ -23,6 +23,7 @@ using System;
 using System.Collections;
 using System.Collections.Specialized;
 using System.Text.RegularExpressions;
+using Brunet;
 
 namespace Brunet.Deetoo {
   /**
@@ -39,7 +40,7 @@ namespace Brunet.Deetoo {
       ArrayList map_args = map_arg as ArrayList;
       string pattern = (string)map_args[0];
       string query_type = (string)map_args[1];
-      ArrayList query_result;
+      ArrayList query_result = null;
       if (query_type == "regex") {
         query_result = _cl.RegExMatch(pattern);
       }
@@ -57,7 +58,8 @@ namespace Brunet.Deetoo {
     
     public override object Reduce(object reduce_arg, 
                                   object current_result, RpcResult child_rpc,
-                                  ref bool done) {
+                                  out bool done) {
+      done = false;
 
       ISender child_sender = child_rpc.ResultSender;
       //the following can throw an exception, will be handled by the framework
@@ -72,8 +74,8 @@ namespace Brunet.Deetoo {
       IDictionary value = child_result as IDictionary;
       int max_height = (int) my_entry["height"];
       int count = (int) my_entry["count"];
-      int hits = (int) my_entry["hits"];
-      ArrayList q_result = my_entry["query_result"];
+      //int hits = (int) my_entry["hits"];
+      ArrayList q_result = (ArrayList)my_entry["query_result"];
       ArrayList c_result = (ArrayList)value["query_result"];
       my_entry["query_result"] = q_result.Add(c_result);
 
@@ -83,7 +85,7 @@ namespace Brunet.Deetoo {
       if (z > max_height) {
         my_entry["height"] = z; 
       }
-      int x = (int) value["no_hit"] + hits;
+      //int x = (int) value["no_hit"] + hits;
       return my_entry;
     }
   }
