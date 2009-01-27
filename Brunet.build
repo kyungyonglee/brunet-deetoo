@@ -82,6 +82,7 @@
     <nant buildfile="src/BasicNode/default.build" />
     <nant buildfile="tests/util/default.build" />
     <nant buildfile="tests/protocol/default.build" />
+    <nant buildfile="src/d2/default.build" />
 
   </target>
 
@@ -96,6 +97,7 @@
     <nant buildfile="src/apps/default.build" />
     <nant buildfile="src/dht/default.build" />
     <nant buildfile="src/coordinate/default.build" />
+    <nant buildfile="src/d2/default.build" />
     <nant buildfile="tests/util/default.build" />
     <nant buildfile="tests/protocol/default.build" target="plab-log"/>
 

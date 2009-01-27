@@ -2,6 +2,7 @@
 This program is part of BruNet, a library for the creation of efficient overlay
 networks.
 Copyright (C) 2008  Arijit Ganguly <aganguly@gmail.com>, University of Florida
+                    Taewoong Choi <twchoi1103@gmail.com>, University of Florida
                     P. Oscar Boykin <boykin@pobox.com>, University of Florida
 
 This program is free software; you can redistribute it and/or
@@ -56,17 +57,10 @@ namespace Brunet {
   /** The following class provides the base class for tasks utilizing the
    *  BoundedBroadcastTree generation.
    */
+  /**
   public abstract class MapReduceBoundedBroadcast: MapReduceTask 
   {
     public MapReduceBoundedBroadcast(Node n):base(n) {}
-    /**
-     * Generates tree for bounded broadcast. Algorithm works as follows:
-     * The goal is to broadcast to all nodes in range [local_address, end).
-     * Given a range [local_address, b), determine all connections that belong to this range.
-     * Let the connections be b_1, b_2, ..... b_n.
-     * To connection bi assign the range [b_i, b_{i+1}).
-     * To the connection bn assign range [b_n, end).]
-     */
     public override MapReduceInfo[] GenerateTree(MapReduceArgs mr_args) 
     {
       object gen_arg = mr_args.GenArg;
@@ -129,5 +123,236 @@ namespace Brunet {
       }
       return (MapReduceInfo[]) retval.ToArray(typeof(MapReduceInfo));
     }
-  }   
+  } 
+*/  
+    /** The following class provides the base class for tasks utilizing the
+   *  BoundedBroadcastTree generation.
+   */
+  public abstract class MapReduceBoundedBroadcast: MapReduceTask 
+  {
+    public MapReduceBoundedBroadcast(Node n):base(n) {}
+    /**
+     * Generates tree for bounded broadcast. Algorithm works as follows:
+     * The goal is to broadcast to all nodes in range [local_address, end).
+     * Given a range [local_address, b), determine all connections that belong to this range.
+     * Let the connections be b_1, b_2, ..... b_n.
+     * To connection bi assign the range [b_i, b_{i+1}).
+     * To the connection bn assign range [b_n, end).]
+     */
+    public override MapReduceInfo[] GenerateTree(MapReduceArgs mr_args) 
+    {
+      object gen = mr_args.GenArg;
+      ArrayList gen_list = gen as ArrayList;
+      string start_range = gen_list[0] as string;
+      string end_range = gen_list[1] as string;
+      bool in_range;
+      ArrayList map_arg = new ArrayList();
+      ArrayList gen_arg = new ArrayList();
+      ArrayList red_arg = new ArrayList();
+      map_arg.Add(mr_args.MapArg);
+      red_arg.Add(mr_args.ReduceArg);
+      Log("generating child tree, range start: {0}, range end: {1}.", start_range, end_range);
+      AHAddress start_addr = (AHAddress) AddressParser.Parse(start_range);
+      AHAddress end_addr = (AHAddress) AddressParser.Parse(end_range);
+      AHAddress this_addr = _node.Address as AHAddress;
+      //we are at the start node, here we go:
+      ConnectionTable tab = _node.ConnectionTable;
+      ConnectionList structs = tab.GetConnections(ConnectionType.Structured);
+      ArrayList retval = new ArrayList();
+      MapReduceInfo mr_info = null;
+
+      if (this_addr.IsBetweenFromLeft(start_addr, end_addr) ) {
+	      //this node is within the given range (start_addr, end_addr)
+	in_range = true;
+	map_arg.Add(in_range);
+	red_arg.Add(in_range);
+        ArrayList left_cons = new ArrayList();
+        ArrayList right_cons = new ArrayList();
+	if (structs.Count > 0) {
+	  foreach(Connection c in structs) {
+            AHAddress adr = (AHAddress)c.Address;
+	    if(adr.IsBetweenFromLeft(this_addr, end_addr) ) {
+              left_cons.Add(c);
+	    }
+	    else if (adr.IsBetweenFromLeft(start_addr, this_addr) ) {
+              right_cons.Add(c);
+	    }
+	    else {
+              //Out of Range. Do nothing!
+	    }
+	  }
+	  //Make a compare and add it to ConnectionTable to sort by Address
+          ConnectionLeftComparer left_cmp = new ConnectionLeftComparer(this_addr);
+	  left_cons.Sort(left_cmp);
+          ConnectionLeftComparer right_cmp = new ConnectionLeftComparer(this_addr);
+	  right_cons.Sort(right_cmp);
+
+	  AHAddress last = this_addr;
+	  //navigate left connections first
+          for (int i = 0; i < left_cons.Count; i++) {
+	    //MapReduceInfo mr_info = null;
+	    ISender sender = null;
+	    Connection next_c = (Connection)left_cons[i];
+	    AHAddress next_addr = (AHAddress)next_c.Address;
+	    sender = (ISender) next_c.Edge;
+	    string front = last.ToString();
+	    string back = next_addr.ToString();
+	    if (i==left_cons.Count -1) {
+	      // The last bit
+	      gen_arg.Add(front);
+	      gen_arg.Add(end_range);
+	      mr_info = new MapReduceInfo( (ISender) sender,
+			                   new MapReduceArgs(this.TaskName,
+						             map_arg,
+							     gen_arg,
+							     red_arg));
+	      /*
+	      mr_info = new MapReduceInfo( (ISender) sender, 
+			                 new MapReduceArgs(this.taskName,
+				                           mr_args.MapArg,
+							   in_range,
+					                   front,
+					                   end_range,
+					                   mr_args.ReduceArg));
+	      */
+	      Log("{0}: {1}, adding address: {2} to sender list, range start: {3}, range end: {4}",
+			    this.TaskName, _node.Address, next_c.Address,
+			    front, end_range);
+	      retval.Add(mr_info);
+	    }
+	    else {
+	      gen_arg.Add(front);
+	      gen_arg.Add(back);
+              mr_info = new MapReduceInfo( (ISender) sender, 
+			                   new MapReduceArgs(this.TaskName,
+						             map_arg,
+							     gen_arg,
+							     red_arg));
+	      Log("{0}: {1}, adding address: {2} to sender list, range start: {3}, range end: {4}",
+			    this.TaskName, _node.Address, next_c.Address,
+			    front, back);
+	    }
+	    last = next_addr;
+	  }
+	  //move to the right connections.
+          for (int i = 0; i < right_cons.Count; i++) {
+	    //MapReduceInfo mr_info = null;
+	    ISender sender = null;
+	    Connection next_c = (Connection)right_cons[i];
+	    AHAddress next_addr = (AHAddress)next_c.Address;
+	    sender = (ISender) next_c.Edge;
+	    string front = last.ToString();
+	    string back = next_addr.ToString();
+	    if (i==right_cons.Count -1) {
+	      gen_arg.Add(start_range);
+	      gen_arg.Add(front);
+	      mr_info = new MapReduceInfo( (ISender) sender, 
+			                 new MapReduceArgs(this.TaskName,
+				                           map_arg, 
+					                   gen_arg,
+					                   red_arg));
+	      Log("{0}: {1}, adding address: {2} to sender list, range start: {3}, range end: {4}",
+			    this.TaskName, _node.Address, next_c.Address,
+			    start_range, front);
+	      retval.Add(mr_info);
+	    }
+	    else {
+	      gen_arg.Add(back);
+	      gen_arg.Add(front);
+              mr_info = new MapReduceInfo( (ISender) sender, 
+			                   new MapReduceArgs(this.TaskName,
+				                           map_arg, 
+					                   gen_arg,
+					                   red_arg));
+	      Log("{0}: {1}, adding address: {2} to sender list, range start: {3}, range end: {4}",
+			    this.TaskName, _node.Address, next_c.Address,
+			    back, front);
+	      retval.Add(mr_info);
+	    }
+	    last = next_addr;
+	  }
+	}
+	else {
+          //this node is a leaf node.
+	}
+      }
+      else { // _node is out of range. Just pass it to the closest to the middle of range.
+	in_range = false;
+	map_arg.Add(in_range);
+	red_arg.Add(in_range);
+        BigInteger up = start_addr.ToBigInteger();
+	BigInteger down = end_addr.ToBigInteger();
+	BigInteger mid_range = (up + down) /2;
+	if (mid_range % 2 == 1) {mid_range = mid_range -1; }
+	AHAddress mid_addr = new AHAddress(mid_range);
+	if (!mid_addr.IsBetweenFromLeft(start_addr, end_addr) ) {
+          mid_range += Address.Half;
+	  mid_addr = new AHAddress(mid_range);
+	}
+	if (NextGreedyClosest(mid_addr) != null ) {
+          AHGreedySender ags = new AHGreedySender(_node, mid_addr);
+	  gen_arg.Add(start_range);
+	  gen_arg.Add(end_range);
+          mr_info = new MapReduceInfo( (ISender) ags,
+			                new MapReduceArgs(this.TaskName,
+						          map_arg,
+							  gen_arg,
+							  red_arg));
+	  Log("{0}: {1}, out of range, moving to the closest node to mid_range: {2} to target node, range start: {3}, range end: {4}",
+			  this.TaskName, _node.Address, mid_addr, start_addr, end_addr);
+	  retval.Add(mr_info);
+	}
+	else  {
+          // cannot find a node in the range. 
+	}
+      }
+      return (MapReduceInfo[]) retval.ToArray(typeof(MapReduceInfo));
+    }
+    /**
+    private bool InRange(AHAddress addr, AHAddress start, AHAddress end) {
+      bool betw = addr.IsBetweenFromLeft(start, end);
+      if (addr == start || addr == end) {
+        return true;
+      }
+      else {
+        return betw;
+      }
+    }
+    */
+        /*
+     * @return closest neighbor to the target.
+     * return null if there is no closer connection to the target.
+     * @param a the target
+     */
+
+    protected Connection NextGreedyClosest(AHAddress a) {
+    /*
+     * First find the Connection pointing to the node closest to a, if
+     * there is one closer than us
+     */
+      ConnectionTable tab = _node.ConnectionTable;
+      ConnectionList structs = tab.GetConnections(ConnectionType.Structured);
+    
+      Connection next_closest = null;
+      int idx = structs.IndexOf(a);
+      if( idx < 0 ) {
+        //a is not the table:
+        Connection right = structs.GetRightNeighborOf(a);
+        Connection left = structs.GetLeftNeighborOf(a);
+        BigInteger my_dist = ((AHAddress)_node.Address).DistanceTo(a).abs();
+        BigInteger ld = ((AHAddress)left.Address).DistanceTo(a).abs();
+        BigInteger rd = ((AHAddress)right.Address).DistanceTo(a).abs();
+        if( (ld < rd) && (ld < my_dist) ) {
+          next_closest = left;
+        }
+        if( (rd < ld) && (rd < my_dist) ) {
+          next_closest = right;
+        }
+      }
+      else {
+        next_closest = structs[idx];
+      }    
+      return next_closest;
+    }
+  }
 }
