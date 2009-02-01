@@ -18,6 +18,7 @@
         <include name="Ipop.IBlockingQueue.dll" />
         <include name="Brunet.XmlRpc.dll" />
         <include name="Brunet.DhtService.dll"/>
+        <include name="Brunet.Deetoo.dll"/>
       </fileset>
     </copy>
 
@@ -46,6 +47,7 @@
         <include name="${build.dir}/Brunet.XmlRpc.dll" />
         <include name="${build.dir}/CookComputing.XmlRpcV2.dll" />
         <include name="${build.dir}/Brunet.DhtService.dll"/>
+        <include name="${build.dir}/Brunet.Deetoo.dll"/>
         <include name="System.Runtime.Remoting.dll"/>
         <include name="Mono.Posix.dll"/>
       </references>
@@ -70,6 +72,7 @@
         <include name="${build.dir}/Brunet.XmlRpc.dll" />
         <include name="${build.dir}/CookComputing.XmlRpcV2.dll" />
         <include name="${build.dir}/Brunet.DhtService.dll"/>
+        <include name="${build.dir}/Brunet.Deetoo.dll"/>
         <include name="System.Runtime.Remoting.dll"/>
         <include name="Mono.Posix.dll"/>
       </references>

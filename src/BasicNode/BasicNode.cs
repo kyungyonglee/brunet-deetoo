@@ -28,6 +28,7 @@ using Brunet.DistributedServices;
 //using Brunet.Deetoo;
 using Brunet.Rpc;
 using Brunet;
+using Brunet.Deetoo;
 using Brunet.Coordinate;
 
 /**
@@ -69,6 +70,7 @@ namespace Brunet.Applications {
     /**  <summary>True if the node should reincarnate itself if Node.Connect
     exits or throws an exception</summary>*/
     protected bool _running;
+    protected CacheList _cs;
 
     /**
     <summary>Loads a configuration file and creates a Node.Address if
@@ -207,6 +209,9 @@ namespace Brunet.Applications {
         }
       } catch {}
       _dht = new Dht(_node, 3, 20);
+      _cs = new CacheList(_node);
+      _node.MapReduce.SubscribeTask(new MapReduceCache(_node,_cs));
+      _node.MapReduce.SubscribeTask(new MapReduceQuery(_node,_cs));
     }
 
     /**

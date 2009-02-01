@@ -2,6 +2,7 @@
 
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Text.RegularExpressions;
 
@@ -33,6 +34,15 @@ namespace Brunet.Deetoo
       this.Alpha = alpha;
       this.Start = start;
       this.End = end;
+    }
+    public bool Equal(CacheEntry ce) {
+      if (this.Content == ce.Content) {
+        return true;
+      }
+      else
+      {
+        return false;
+      }
     }
   }
   public class CacheList : IRpcHandler  {
@@ -88,7 +98,17 @@ namespace Brunet.Deetoo
       catch {
         Console.WriteLine("An element with Key = {0} already exists.",Key);
       }
-    } 
+    }
+    public void Insert(string str, float alpha, Address a, Address b) {
+      CacheEntry ce = new CacheEntry(str, alpha, a, b);
+      //string Key = ce.Content;
+      try { 
+        _data.Add(str,ce);
+      }
+      catch {
+        Console.WriteLine("An element with Key = {0} already exists.",str);
+      }
+    }
     /*
     public bool Match(string pattern) {
       if (Count == 0) {
@@ -96,8 +116,8 @@ namespace Brunet.Deetoo
         IDictionaryEnumerator en = list_of_contents;
     }
     */
-    public ArrayList RegExMatch(string pattern) { 
-      ArrayList result = null;
+    public List<string> RegExMatch(string pattern) { 
+      List<string> result = new List<string>();
       Regex match_pattern = new Regex(pattern);
       //foreach(DictionaryEntry de in _data)
       foreach(CacheEntry de in _data)

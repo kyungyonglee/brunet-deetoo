@@ -232,6 +232,9 @@ namespace Brunet {
       Sender = sender;
       Args = args;
     }
+    public MapReduceArgs ARGS {
+      get { return Args; }
+    }
   }
 
   /**

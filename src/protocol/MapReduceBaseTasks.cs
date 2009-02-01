@@ -145,16 +145,21 @@ namespace Brunet {
       ArrayList gen_list = gen as ArrayList;
       string start_range = gen_list[0] as string;
       string end_range = gen_list[1] as string;
+      foreach(string rg_arg in gen_list) {
+       Console.WriteLine("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
+       Console.WriteLine("range info: {0} ",rg_arg);
+      }
       bool in_range;
       ArrayList map_arg = new ArrayList();
       ArrayList gen_arg = new ArrayList();
       ArrayList red_arg = new ArrayList();
       map_arg.Add(mr_args.MapArg);
       red_arg.Add(mr_args.ReduceArg);
-      Log("generating child tree, range start: {0}, range end: {1}.", start_range, end_range);
       AHAddress start_addr = (AHAddress) AddressParser.Parse(start_range);
       AHAddress end_addr = (AHAddress) AddressParser.Parse(end_range);
       AHAddress this_addr = _node.Address as AHAddress;
+      Console.WriteLine("------------------------------------this_addr: {0}, start: {1}, end: {2}", this_addr, start_range, end_range);
+      Log("generating child tree, range start: {0}, range end: {1}.", start_range, end_range);
       //we are at the start node, here we go:
       ConnectionTable tab = _node.ConnectionTable;
       ConnectionList structs = tab.GetConnections(ConnectionType.Structured);
@@ -186,6 +191,14 @@ namespace Brunet {
 	  left_cons.Sort(left_cmp);
           ConnectionLeftComparer right_cmp = new ConnectionLeftComparer(this_addr);
 	  right_cons.Sort(right_cmp);
+	  //Print out neighbour list after sorting.
+	  if (left_cons.Count != 0) {
+	    PrintConnectionList(left_cons);
+	  }
+	  Console.WriteLine("-------------------------");
+	  if (right_cons.Count !=0) {
+	    PrintConnectionList(right_cons);
+	  }
 
 	  AHAddress last = this_addr;
 	  //navigate left connections first
@@ -197,10 +210,13 @@ namespace Brunet {
 	    sender = (ISender) next_c.Edge;
 	    string front = last.ToString();
 	    string back = next_addr.ToString();
+	    gen_arg.Clear();
 	    if (i==left_cons.Count -1) {
 	      // The last bit
 	      gen_arg.Add(front);
 	      gen_arg.Add(end_range);
+	      //Console.WriteLine("*********************************************gen_args Count: {0}",gen_arg.Count);
+	      //Console.WriteLine("next: {0}, gen[0]: {1}, gen[1]: {2} ", next_c.Address, gen_arg[0], gen_arg[1]);
 	      mr_info = new MapReduceInfo( (ISender) sender,
 			                   new MapReduceArgs(this.TaskName,
 						             map_arg,
@@ -218,11 +234,21 @@ namespace Brunet {
 	      Log("{0}: {1}, adding address: {2} to sender list, range start: {3}, range end: {4}",
 			    this.TaskName, _node.Address, next_c.Address,
 			    front, end_range);
+	      //Console.WriteLine("++left  this_addr: {0}, next: {1}, start: {2}, end: {3}",
+		//	    _node.Address, next_c.Address, front, end_range);
 	      retval.Add(mr_info);
+	      Console.WriteLine("************************* retval.Count: {0}", retval.Count);
+	      foreach (MapReduceInfo Mri in retval) {
+		MapReduceArgs Mrargs = Mri.ARGS as MapReduceArgs;
+		ArrayList gen_arg1 = Mrargs.GenArg as ArrayList;
+	        Console.WriteLine("########### add retval here: gen_arg[0]: {0}, gen_arg{1}: ", gen_arg1[0], gen_arg1[1] );
+	      }
 	    }
 	    else {
 	      gen_arg.Add(front);
 	      gen_arg.Add(back);
+	      //Console.WriteLine("*********************************************gen_args Count: {0}",gen_arg.Count);
+	      //Console.WriteLine("next: {0}, gen[0]: {1}, gen[1]: {2} ", next_c.Address, gen_arg[0], gen_arg[1]);
               mr_info = new MapReduceInfo( (ISender) sender, 
 			                   new MapReduceArgs(this.TaskName,
 						             map_arg,
@@ -231,21 +257,40 @@ namespace Brunet {
 	      Log("{0}: {1}, adding address: {2} to sender list, range start: {3}, range end: {4}",
 			    this.TaskName, _node.Address, next_c.Address,
 			    front, back);
+	      //Console.WriteLine("++left(last)  this_addr: {0}, next: {1}, start: {2}, end: {3}",
+		//	    _node.Address, next_c.Address, front, back);
+	      retval.Add(mr_info);
+	      Console.WriteLine("************************* retval.Count: {0}", retval.Count);
+	      foreach (MapReduceInfo Mri in retval) {
+		MapReduceArgs Mrargs = Mri.ARGS as MapReduceArgs;
+		ArrayList gen_arg1 = Mrargs.GenArg as ArrayList;
+	        Console.WriteLine("########### add retval here: gen_arg[0]: {0}, gen_arg{1}: ", gen_arg1[0], gen_arg1[1] );
+	      }
 	    }
 	    last = next_addr;
+	    // check if list is sorted or not
+	    foreach(string stri in gen_arg) {
+	      Console.WriteLine("gen_args: {0} ", stri);
+	    }
 	  }
 	  //move to the right connections.
+	  last = this_addr;
           for (int i = 0; i < right_cons.Count; i++) {
 	    //MapReduceInfo mr_info = null;
 	    ISender sender = null;
 	    Connection next_c = (Connection)right_cons[i];
 	    AHAddress next_addr = (AHAddress)next_c.Address;
 	    sender = (ISender) next_c.Edge;
-	    string front = last.ToString();
-	    string back = next_addr.ToString();
+	    string front = next_addr.ToString();
+	    string back = last.ToString();
+	    gen_arg.Clear();
 	    if (i==right_cons.Count -1) {
 	      gen_arg.Add(start_range);
-	      gen_arg.Add(front);
+	      //gen_arg.Add(front);
+	      gen_arg.Add(back);
+	      //Console.WriteLine("*********************************************");
+	      //Console.WriteLine("*********************************************gen_args Count: {0}",gen_arg.Count);
+	      //Console.WriteLine("next: {0}, gen[0]: {1}, gen[1]: {2} ", next_c.Address, gen_arg[0], gen_arg[1]);
 	      mr_info = new MapReduceInfo( (ISender) sender, 
 			                 new MapReduceArgs(this.TaskName,
 				                           map_arg, 
@@ -254,11 +299,22 @@ namespace Brunet {
 	      Log("{0}: {1}, adding address: {2} to sender list, range start: {3}, range end: {4}",
 			    this.TaskName, _node.Address, next_c.Address,
 			    start_range, front);
+	      //Console.WriteLine("++right  this_addr: {0}, next: {1}, start: {2}, end: {3}",
+	      //		    _node.Address, next_c.Address, start_range, back);
 	      retval.Add(mr_info);
+	      Console.WriteLine("************************* retval.Count: {0}", retval.Count);
+	      foreach (MapReduceInfo Mri in retval) {
+		MapReduceArgs Mrargs = Mri.ARGS as MapReduceArgs;
+		ArrayList gen_arg1 = Mrargs.GenArg as ArrayList;
+	        Console.WriteLine("########### add retval here: gen_arg[0]: {0}, gen_arg{1}: ", gen_arg1[0], gen_arg1[1] );
+	      }
 	    }
 	    else {
-	      gen_arg.Add(back);
 	      gen_arg.Add(front);
+	      gen_arg.Add(back);
+	      //Console.WriteLine("*********************************************");
+	      //Console.WriteLine("*********************************************gen_args Count: {0}",gen_arg.Count);
+	      //Console.WriteLine("next: {0}, gen[0]: {1}, gen[1]: {2} ", next_c.Address, gen_arg[0], gen_arg[1]);
               mr_info = new MapReduceInfo( (ISender) sender, 
 			                   new MapReduceArgs(this.TaskName,
 				                           map_arg, 
@@ -267,9 +323,21 @@ namespace Brunet {
 	      Log("{0}: {1}, adding address: {2} to sender list, range start: {3}, range end: {4}",
 			    this.TaskName, _node.Address, next_c.Address,
 			    back, front);
+	      //Console.WriteLine("++right(last)  this_addr: {0}, next: {1}, start: {2}, end: {3}",
+		//	    _node.Address, next_c.Address, front, back);
 	      retval.Add(mr_info);
+	      Console.WriteLine("************************* retval.Count: {0}", retval.Count);
+	      foreach (MapReduceInfo Mri in retval) {
+		MapReduceArgs Mrargs = Mri.ARGS as MapReduceArgs;
+		ArrayList gen_arg1 = Mrargs.GenArg as ArrayList;
+	        Console.WriteLine("########### add retval here: gen_arg[0]: {0}, gen_arg{1}: ", gen_arg1[0], gen_arg1[1] );
+	      }
 	    }
 	    last = next_addr;
+	    // check if list is sorted or not
+	    foreach(string stri in gen_arg) {
+	      Console.WriteLine("gen_args: {0} ", stri);
+	    }
 	  }
 	}
 	else {
@@ -289,6 +357,7 @@ namespace Brunet {
           mid_range += Address.Half;
 	  mid_addr = new AHAddress(mid_range);
 	}
+	gen_arg.Clear();
 	if (NextGreedyClosest(mid_addr) != null ) {
           AHGreedySender ags = new AHGreedySender(_node, mid_addr);
 	  gen_arg.Add(start_range);
@@ -305,6 +374,13 @@ namespace Brunet {
 	else  {
           // cannot find a node in the range. 
 	}
+      }
+      Console.WriteLine("----- end of GenerateTree ----------");
+      foreach(MapReduceInfo mri in retval) {
+	MapReduceArgs mrargs = mri.ARGS as MapReduceArgs;
+        ArrayList this_gen_arg = mrargs.GenArg as ArrayList;
+	Console.WriteLine("######### in retval: gen_arg[0]: {0}, gen_arg{1}: ", this_gen_arg[0], this_gen_arg[1] );
+	
       }
       return (MapReduceInfo[]) retval.ToArray(typeof(MapReduceInfo));
     }
@@ -353,6 +429,18 @@ namespace Brunet {
         next_closest = structs[idx];
       }    
       return next_closest;
+    }
+        /*
+     * This is to see if connection list elements are sorted or not.
+     */
+    public void PrintConnectionList(ArrayList l) {
+      for(int i = 0; i < l.Count; i++) {
+	Connection c = (Connection)l[i];
+	AHAddress next_add = (AHAddress)c.Address;
+	AHAddress this_addr = (AHAddress)_node.Address;
+	BigInteger dist = this_addr.LeftDistanceTo(next_add);
+        Console.WriteLine("add: {0}, dis: {1}", next_add, dist);
+      }
     }
   }
 }

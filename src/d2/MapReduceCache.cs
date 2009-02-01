@@ -26,17 +26,30 @@ using Brunet;
 
 namespace Brunet.Deetoo {
   /**
-   * This class implements a map-reduce task that allows regular 
-   * expression search using Bounded Broadcasting. 
+   * This class implements a map-reduce task that allows Deetoo 
+   * object caching.
+   * BoundedBroadcast is used for tree-generation.
    */ 
   public class MapReduceCache: MapReduceBoundedBroadcast {
+    //Deetoo object, [content, start_range, end_range, replication_factor]
     private CacheList _cl;
+    /*
+     * @param cl CacheList object for caching.
+     */
     public MapReduceCache(Node n, CacheList cl): base(n) {
       _cl = cl;
     }
+    /*
+     * Map method add CachEntry to CacheList
+     */
     public override object Map(object map_arg) {
       ArrayList arg = map_arg as ArrayList;	    
-      CacheEntry ce = (CacheEntry)arg[0];
+      //CacheEntry ce = (CacheEntry)arg[0];
+      string input = (string)arg[0];
+      float alpha = (float)arg[1];
+      Address a = (Address)arg[2];
+      Address b = (Address)arg[3];
+      CacheEntry ce = new CacheEntry(input, alpha, a, b);
       int result = 0;   // if caching is successful, result will set to 1.
       int previous_count = _cl.Count;
       try {

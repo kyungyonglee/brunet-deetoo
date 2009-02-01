@@ -21,9 +21,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Text.RegularExpressions;
-using Brunet;
 
 namespace Brunet.Deetoo {
   /**
@@ -40,7 +40,8 @@ namespace Brunet.Deetoo {
       ArrayList map_args = map_arg as ArrayList;
       string pattern = (string)map_args[0];
       string query_type = (string)map_args[1];
-      ArrayList query_result = null;
+      List<string> query_result = new List<string>();
+      //ArrayList query_result = null;
       if (query_type == "regex") {
         query_result = _cl.RegExMatch(pattern);
       }
@@ -59,8 +60,8 @@ namespace Brunet.Deetoo {
     public override object Reduce(object reduce_arg, 
                                   object current_result, RpcResult child_rpc,
                                   out bool done) {
-      done = false;
 
+      done = false;
       ISender child_sender = child_rpc.ResultSender;
       //the following can throw an exception, will be handled by the framework
       object child_result = child_rpc.Result;
@@ -75,9 +76,10 @@ namespace Brunet.Deetoo {
       int max_height = (int) my_entry["height"];
       int count = (int) my_entry["count"];
       //int hits = (int) my_entry["hits"];
-      ArrayList q_result = (ArrayList)my_entry["query_result"];
-      ArrayList c_result = (ArrayList)value["query_result"];
-      my_entry["query_result"] = q_result.Add(c_result);
+      List<string> q_result = (List<string>)my_entry["query_result"];
+      List<string> c_result = (List<string>)value["query_result"];
+      q_result.AddRange(c_result);
+      my_entry["query_result"] = q_result;
 
       int y = (int) value["count"];
       my_entry["count"] = count + y;
