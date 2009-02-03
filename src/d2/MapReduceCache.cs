@@ -45,15 +45,24 @@ namespace Brunet.Deetoo {
     public override object Map(object map_arg) {
       ArrayList arg = map_arg as ArrayList;	    
       //CacheEntry ce = (CacheEntry)arg[0];
-      string input = (string)arg[0];
-      float alpha = (float)arg[1];
-      Address a = (Address)arg[2];
-      Address b = (Address)arg[3];
+      string input = arg[0] as string;
+      double alpha = (double)arg[1];
+      string st = arg[2] as string;
+      string ed = arg[3] as string; 
+      AHAddress a,b;
+      try {
+        a = (AHAddress)AddressParser.Parse(st);
+        b = (AHAddress)AddressParser.Parse(ed);
+      }
+      catch(Exception e) {
+        throw e;
+      }
       CacheEntry ce = new CacheEntry(input, alpha, a, b);
       int result = 0;   // if caching is successful, result will set to 1.
       int previous_count = _cl.Count;
       try {
         _cl.Insert(ce);
+	result = 1;
       }
       catch {
 

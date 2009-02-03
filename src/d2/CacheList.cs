@@ -10,6 +10,7 @@ namespace Brunet.Deetoo
 {
   public class CacheEntry {
     protected Hashtable _ht = new Hashtable(4);
+    //public Node node = null;
     public static explicit operator Hashtable(CacheEntry c) {
       return c._ht;
     }
@@ -17,23 +18,29 @@ namespace Brunet.Deetoo
       get { return (string) _ht["content"]; }
       set { _ht["content"] = value; }
     }
-    public float Alpha {
-      get { return (float) _ht["alpha"]; }
+    public double Alpha {
+      get { return (double) _ht["alpha"]; }
       set { _ht["alpha"] = value; }
     }
     public Address Start {
-      get { return (AHAddress) _ht["start"]; }
+      get { return (Address) _ht["start"]; }
       set { _ht["start"] = value; }
     }
     public Address End {
-      get { return (AHAddress) _ht["end"]; }
+      get { return (Address) _ht["end"]; }
       set { _ht["end"] = value; }
     }
-    public CacheEntry(string content, float alpha, Address start, Address end) {
+    public CacheEntry(string content, double alpha, Address start, Address end) {
       this.Content = content;
       this.Alpha = alpha;
       this.Start = start;
       this.End = end;
+    }
+    public CacheEntry(Hashtable ht) {
+      Content = (string)ht["content"];
+      Alpha = (double)ht["alpha"];
+      Start = (Address)ht["start"];
+      End = (Address)ht["end"];
     }
     public bool Equal(CacheEntry ce) {
       if (this.Content == ce.Content) {
@@ -99,7 +106,7 @@ namespace Brunet.Deetoo
         Console.WriteLine("An element with Key = {0} already exists.",Key);
       }
     }
-    public void Insert(string str, float alpha, Address a, Address b) {
+    public void Insert(string str, double alpha, Address a, Address b) {
       CacheEntry ce = new CacheEntry(str, alpha, a, b);
       //string Key = ce.Content;
       try { 
@@ -134,14 +141,16 @@ namespace Brunet.Deetoo
       return result;
     }
     public string ExactMatch(string pattern) {
+      Console.WriteLine("00_--------------");
       string result = null;
-      foreach(CacheEntry de in _data)
+      Console.WriteLine("01_--------------");
+      if (_data.ContainsKey(pattern) )
       {
-        if (de.Content == pattern) {
-	  result = de.Content;	
-	}
-	
+	Console.WriteLine("1_--------------");
+        result = pattern;
+	Console.WriteLine("2_--------------");
       }
+      Console.WriteLine("3_--------------");
       return result;
     } 
     /*

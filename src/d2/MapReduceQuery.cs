@@ -38,22 +38,32 @@ namespace Brunet.Deetoo {
     public override object Map(object map_arg) {
       //ArrayList cache = new ArrayList();
       ArrayList map_args = map_arg as ArrayList;
-      string pattern = (string)map_args[0];
-      string query_type = (string)map_args[1];
-      List<string> query_result = new List<string>();
+      Console.WriteLine("M2---------------");
+      string pattern = (string)(map_args[0]);
+      Console.WriteLine("M3---------------");
+      string query_type = (string)(map_args[1]);
+      Console.WriteLine("M4---------------");
+      Console.WriteLine("query_type:{0}", query_type);
       //ArrayList query_result = null;
+      IDictionary my_entry = new ListDictionary();
+      Console.WriteLine("M5---------------");
       if (query_type == "regex") {
-        query_result = _cl.RegExMatch(pattern);
+        List<string> query_result = _cl.RegExMatch(pattern);
+	my_entry["query_result"] = query_result;
       }
       else if (query_type == "exact") {
         string exact_result = _cl.ExactMatch(pattern);
-	query_result.Add(exact_result);
-
+        //query_result.Add(exact_result);
+        my_entry["query_result"] = exact_result;
       }
-      IDictionary my_entry = new ListDictionary();
+      else {
+        throw new AdrException(-32608, "No Deetoo match option with this name: " +  query_type);
+      }
+      Console.WriteLine("M6---------------");
       my_entry["count"] = 1;
       my_entry["height"] = 1;
-      my_entry["query_result"] = query_result;
+      Console.WriteLine("map result: {0}", my_entry["query_result"]);
+      //my_entry["query_result"] = query_result;
       return my_entry;
     }
     
@@ -62,33 +72,53 @@ namespace Brunet.Deetoo {
                                   out bool done) {
 
       done = false;
-      ISender child_sender = child_rpc.ResultSender;
-      //the following can throw an exception, will be handled by the framework
+      //ISender child_sender = child_rpc.ResultSender;
+      string query_type = (string)reduce_arg;
+      Console.WriteLine("current result: {0}",current_result);
       object child_result = child_rpc.Result;
-      
       //child result is a valid result
       if (current_result == null) {
         return child_result;
       }
-      
-      IDictionary my_entry = current_result as IDictionary;
-      IDictionary value = child_result as IDictionary;
-      int max_height = (int) my_entry["height"];
-      int count = (int) my_entry["count"];
-      //int hits = (int) my_entry["hits"];
-      List<string> q_result = (List<string>)my_entry["query_result"];
-      List<string> c_result = (List<string>)value["query_result"];
-      q_result.AddRange(c_result);
-      my_entry["query_result"] = q_result;
-
-      int y = (int) value["count"];
-      my_entry["count"] = count + y;
-      int z = (int) value["height"] + 1;
-      if (z > max_height) {
-        my_entry["height"] = z; 
+      else {
+        // if this is exact matching and we have current result, 
+        // return current result immediately.
+        if (query_type == "exact") {
+	  done = true;
+          return current_result;
+        }
+	else if(query_type == "regex") {
+          //the following can throw an exception, will be handled by the framework
+  	  Console.WriteLine("Q1---------------");
+          IDictionary my_entry = current_result as IDictionary;
+	  Console.WriteLine("Q2---------------");
+          IDictionary value = child_result as IDictionary;
+	  Console.WriteLine("Q3---------------");
+          int max_height = (int) (my_entry["height"]);
+	  Console.WriteLine("Q4---------------");
+          int count = (int) (my_entry["count"]);
+	  Console.WriteLine("Q5---------------");
+          //int hits = (int) my_entry["hits"];
+          List<string> q_result = (List<string>)(my_entry["query_result"]);
+	  Console.WriteLine("Q6---------------");
+	
+          List<string> c_result = (List<string>)(value["query_result"]);
+	  Console.WriteLine("Q7---------------");
+          q_result.AddRange(c_result);
+          my_entry["query_result"] = q_result;
+          int y = (int) value["count"];
+          my_entry["count"] = count + y;
+          int z = (int) value["height"] + 1;
+          if (z > max_height) {
+            my_entry["height"] = z; 
+          }
+          //int x = (int) value["no_hit"] + hits;
+          return my_entry;
+	}
+	else {
+          throw new AdrException(-32608, "This query type {0} is supported." + query_type);
+	}
       }
-      //int x = (int) value["no_hit"] + hits;
-      return my_entry;
     }
   }
 }
