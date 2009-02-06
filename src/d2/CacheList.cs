@@ -123,17 +123,22 @@ namespace Brunet.Deetoo
         IDictionaryEnumerator en = list_of_contents;
     }
     */
-    public List<string> RegExMatch(string pattern) { 
-      List<string> result = new List<string>();
+    public ArrayList RegExMatch(string pattern) { 
+      Console.WriteLine("R1_--------------");
+      ArrayList result = new ArrayList();
+      Console.WriteLine("R2_--------------");
       Regex match_pattern = new Regex(pattern);
-      //foreach(DictionaryEntry de in _data)
-      foreach(CacheEntry de in _data)
+      Console.WriteLine("R3_--------------");
+      foreach(DictionaryEntry de in _data)
       //IDictionaryEnumerator en = _data.GetEnumerator();
       //while (en.MoveNext() )
       {
 	//CacheEntry entry = (CacheEntry) de;
 	//string this_key = entry.Content;
-	string this_key = de.Content;
+        Console.WriteLine("R4_--------------");
+	//CacheEntry this_entry = (CachEntry)de;
+	string this_key = (string)(de.Key);
+        Console.WriteLine("R5_--------------");
         if (match_pattern.IsMatch(this_key)) {
 	  result.Add(this_key);
 	}

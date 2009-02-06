@@ -48,7 +48,8 @@ namespace Brunet.Deetoo {
       IDictionary my_entry = new ListDictionary();
       Console.WriteLine("M5---------------");
       if (query_type == "regex") {
-        List<string> query_result = _cl.RegExMatch(pattern);
+        ArrayList query_result = (ArrayList)(_cl.RegExMatch(pattern));
+	Console.WriteLine("M66--------------------");
 	my_entry["query_result"] = query_result;
       }
       else if (query_type == "exact") {
@@ -62,7 +63,7 @@ namespace Brunet.Deetoo {
       Console.WriteLine("M6---------------");
       my_entry["count"] = 1;
       my_entry["height"] = 1;
-      Console.WriteLine("map result: {0}", my_entry["query_result"]);
+      Console.WriteLine("map result: {0}", (my_entry["query_result"]).GetType());
       //my_entry["query_result"] = query_result;
       return my_entry;
     }
@@ -75,6 +76,7 @@ namespace Brunet.Deetoo {
       //ISender child_sender = child_rpc.ResultSender;
       string query_type = (string)reduce_arg;
       Console.WriteLine("current result: {0}",current_result);
+      Console.WriteLine("==================");
       object child_result = child_rpc.Result;
       //child result is a valid result
       if (current_result == null) {
@@ -99,10 +101,11 @@ namespace Brunet.Deetoo {
           int count = (int) (my_entry["count"]);
 	  Console.WriteLine("Q5---------------");
           //int hits = (int) my_entry["hits"];
-          List<string> q_result = (List<string>)(my_entry["query_result"]);
-	  Console.WriteLine("Q6---------------");
+          ArrayList q_result = (ArrayList)(my_entry["query_result"]);
+	  Console.WriteLine("Q6_0--------------------q_result: {0}", q_result.GetType());
+	  Console.WriteLine("Q6--------------------value[query_result]: {0}", (value["query_result"]).GetType());
 	
-          List<string> c_result = (List<string>)(value["query_result"]);
+          ArrayList c_result = (ArrayList)(value["query_result"]);
 	  Console.WriteLine("Q7---------------");
           q_result.AddRange(c_result);
           my_entry["query_result"] = q_result;
