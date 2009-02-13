@@ -2,7 +2,6 @@
 This program is part of BruNet, a library for the creation of efficient overlay
 networks.
 Copyright (C) 2008 Taewoong Choi <twchoi@ufl.edu> University of Florida  
-                   P. Oscar Boykin <boykin@pobox.com>, University of Florida
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License
