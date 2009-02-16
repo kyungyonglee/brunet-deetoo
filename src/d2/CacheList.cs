@@ -30,23 +30,20 @@ namespace Brunet.Deetoo
     //LiskedList<MemBlock> list_of_contents = new LinkedList<MemBlock>();
     protected Hashtable _data = new Hashtable();
     protected Node _node;
+    protected RpcManager _rpc;
     //protected int _count = 0;
     public int Count { get { return _data.Count; } }
     public Address Owner { get { return _node.Address; } }
     public Hashtable Data { get { return _data; } }
+    /*
+     * CacheList is a set of chached data(For now, data is strings).
+     * 
+     */
     public CacheList(Node node) { 
       _node = node;
+      _rpc = RpcManager.GetInstance(node);
+      _rpc.AddHandler("Deetoo", new DeetooHandler(node,this));
     }
-    /**
-    public CacheList() { 
-
-    }
-
-    public CacheList(CacheEntry ce) {
-      string Key = ce.Content;
-      _data.Add(Key,ce);
-    }
-    */
     public void Insert(CacheEntry ce) {
       string Key = ce.Content;
       if (!_data.ContainsKey(Key)  ) {
@@ -58,9 +55,12 @@ namespace Brunet.Deetoo
       //Console.WriteLine("_data.Count: {0}", _data.Count);
     }
     public void Insert(string str, double alpha, Address a, Address b) {
+      Console.WriteLine("*********************************");
+      Console.WriteLine("Insertion is required here at {0}",_node.Address);
       CacheEntry ce = new CacheEntry(str, alpha, a, b);
       if (!_data.ContainsKey(str)) { 
         _data.Add(str,ce);
+	Console.WriteLine("~~~~~~~~~~~~Inserted!!!!!!!!!!");
       }
       else {
         //Console.WriteLine("An element with Key = {0} already exists.",str);
@@ -69,8 +69,8 @@ namespace Brunet.Deetoo
     }
     /*
      * Regular Expression search method
-     * return matching string list from CacheList
-     * @pattern candidate regular expression
+     * return list of matching strings from CacheList
+     * @pattern regular expression
     */
     public ArrayList RegExMatch(string pattern) { 
       ArrayList result = new ArrayList();
@@ -84,47 +84,30 @@ namespace Brunet.Deetoo
       }
       return result;
     }
-    public string ExactMatch(string pattern) {
+    /*
+     * ExactMatch returns matching string in the CacheList.
+     * returns null if no matching string with a given key.
+     */
+    public string ExactMatch(string key) {
       string result = null;
-      if (_data.ContainsKey(pattern) )
+      if (_data.ContainsKey(key) )
       {
-        result = pattern;
+        result = key;
       }
       return result;
     } 
-    /*
-     * ask neighbors to push their CacheList 
+     /*
+     * Stabilize adjusts bounded broadcasting range based on 
+     * current estimated network size.
+     * recalculate range and replace range info with new range on each entry.
      */
-    /*
-     * Upon requesting update, a remote node push 
-     * its CacheList to a requesting node.
-     */
-    /*
-    public ArrayList Push(ArrayList keys) {
-      ArrayList result = new ArrayList();
-      Console.WriteLine("-----start push at {0}",_node.Address);
-      if (_data.Count != 0) {
-        foreach(DictionaryEntry de in _data) {
-	  string this_key = (string)de.Key;
-	  CacheEntry ce = (CacheEntry)de.Value;
-	  CacheEntry new_ce = ReCalculateRange(ce);
-	  _data.Remove(this_key);
-	  _data.Add(this_key,new_ce);
-          if (!keys.Contains(this_key) ) {
-            Console.WriteLine("Send {0} to the requesting node.",this_key);
-            result.Add(ce);
-	  }
-        }
-      }
-      return result;
-    }
-    */
     public void Stabilize() {
-      
+      Console.WriteLine("In CacheList, ------{0}",_node.Address); 
       foreach (DictionaryEntry dic in _data) {
         string this_key = (string)dic.Key;
 	CacheEntry ce = (CacheEntry)dic.Value;
 	BigInteger rg_size = ce.GetRangeSize(_node);
+        Console.WriteLine("{0} key's new range size: {1}",this_key, rg_size);
 	ce.ReCalculateRange(rg_size);
 	_data.Remove(this_key);
 	_data.Add(this_key,ce);
