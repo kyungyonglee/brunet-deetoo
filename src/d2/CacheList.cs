@@ -26,7 +26,7 @@ using System.Text.RegularExpressions;
 
 namespace Brunet.Deetoo
 {
-  public class CacheList  {
+  public class CacheList : IEnumerable {
     //LiskedList<MemBlock> list_of_contents = new LinkedList<MemBlock>();
     protected Hashtable _data = new Hashtable();
     protected Node _node;
@@ -44,9 +44,18 @@ namespace Brunet.Deetoo
       _rpc = RpcManager.GetInstance(node);
       _rpc.AddHandler("Deetoo", new DeetooHandler(node,this));
     }
+    public IEnumerator GetEnumerator() {
+      IDictionaryEnumerator en = _data.GetEnumerator();
+      while(en.MoveNext() ) {
+        yield return en.Current;
+      }
+    }
     public void Insert(CacheEntry ce) {
+      //Console.WriteLine("*********************************");
+      //Console.WriteLine("Insertion is required here at {0}",_node.Address);
       string Key = ce.Content;
       if (!_data.ContainsKey(Key)  ) {
+	//Console.WriteLine("~~~~~~~~~~~~Inserted!!!!!!!!!!");
         _data.Add(Key,ce);
       }
       else {
@@ -55,12 +64,12 @@ namespace Brunet.Deetoo
       //Console.WriteLine("_data.Count: {0}", _data.Count);
     }
     public void Insert(string str, double alpha, Address a, Address b) {
-      Console.WriteLine("*********************************");
-      Console.WriteLine("Insertion is required here at {0}",_node.Address);
+      //Console.WriteLine("*********************************");
+      //Console.WriteLine("Insertion is required here at {0}",_node.Address);
       CacheEntry ce = new CacheEntry(str, alpha, a, b);
       if (!_data.ContainsKey(str)) { 
         _data.Add(str,ce);
-	Console.WriteLine("~~~~~~~~~~~~Inserted!!!!!!!!!!");
+	//Console.WriteLine("~~~~~~~~~~~~Inserted!!!!!!!!!!");
       }
       else {
         //Console.WriteLine("An element with Key = {0} already exists.",str);
@@ -102,15 +111,21 @@ namespace Brunet.Deetoo
      * recalculate range and replace range info with new range on each entry.
      */
     public void Stabilize() {
-      Console.WriteLine("In CacheList, ------{0}",_node.Address); 
+      //Console.WriteLine("In CacheList, ------{0}",_node.Address); 
       foreach (DictionaryEntry dic in _data) {
         string this_key = (string)dic.Key;
 	CacheEntry ce = (CacheEntry)dic.Value;
 	BigInteger rg_size = ce.GetRangeSize(_node);
-        Console.WriteLine("{0} key's new range size: {1}",this_key, rg_size);
+        //Console.WriteLine("{0} key's new range size: {1}",this_key, rg_size);
 	ce.ReCalculateRange(rg_size);
-	_data.Remove(this_key);
-	_data.Add(this_key,ce);
+	//_data.Remove(this_key);
+	//Console.WriteLine("start: {0}, end: {1}, alpha: {2}",ce.Start,ce.End, ce.Alpha);
+	if (!ce.InRange(_node.Address)) {
+	  //This node is not in this entry's range. 
+	  //Remove this entry.
+          //Console.WriteLine("not mine any more");
+	  _data.Remove(this_key);
+	}
       } 
     }
   }

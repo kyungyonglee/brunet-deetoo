@@ -456,7 +456,8 @@ namespace Brunet.Rpc {
        */
       props.Add("name", ""); 
 #else
-      props.Add("name", "xmlrpc");  //so that this channel won't collide with dht services
+      string name = "xmlrpc" + port.ToString();
+      props.Add("name", name);  //so that this channel won't collide with dht services
 #endif
       _channel = new HttpChannel(props, null, chain);
       ChannelServices.RegisterChannel(_channel, false);
@@ -488,13 +489,29 @@ namespace Brunet.Rpc {
     /**
      * The overloaded method for now is used to allow RpcManager to be replaced
      * by MockRpcManager in unit tests.
-     */
     public void Update(Node node, RpcManager rpc) {
       _rpc = rpc;
       _node = node;
       _xrm = new XmlRpcManager(_node, _rpc);
       _rpc.AddHandler("xmlrpc", _xrm);
       RemotingServices.Marshal(_xrm, "xm.rem");
+    }
+     */
+    public void Update(Node node, RpcManager rpc) {
+      Update(node,"");
+    }
+    /**
+     * The overloaded method for now is used to allow distinct Uri for multiple XmlRpcManagerServer.
+     */
+    public void Update(Node node, string type) {
+      RpcManager rpc = RpcManager.GetInstance(node);
+      _rpc = rpc;
+      _node = node;
+      _xrm = new XmlRpcManager(_node, _rpc);
+      _rpc.AddHandler("xmlrpc", _xrm);
+      string svc_name = type + "xm.rem";
+      Console.WriteLine("svc_name: {0}",svc_name);
+      RemotingServices.Marshal(_xrm, svc_name);
     }
   }
 

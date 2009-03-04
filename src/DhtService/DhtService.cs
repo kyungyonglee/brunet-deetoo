@@ -46,7 +46,8 @@ namespace Brunet.Rpc {
 
       IDictionary props = new Hashtable();
       props.Add("port", port);
-      props.Add("name", "dhtsvc");
+      string name = "dhtsvc" + port.ToString();
+      props.Add("name", name);
       _channel = new HttpChannel(props, null, chain);
       ChannelServices.RegisterChannel(_channel, false);
     }
@@ -69,6 +70,13 @@ namespace Brunet.Rpc {
 
       _xd = new XmlRpcDht(dht);
       RemotingServices.Marshal(_xd, "xd.rem");
+    }
+    public void Update(Dht dht,string type) {
+      _sd = new SoapDht(dht);
+      RemotingServices.Marshal(_sd, type+"_sd.rem");
+
+      _xd = new XmlRpcDht(dht);
+      RemotingServices.Marshal(_xd, type+"_xd.rem");
     }
   }
 }
