@@ -219,7 +219,7 @@ namespace Brunet.Applications {
             q_el = new TcpEdgeListener(port, q_addresses);
           }
           catch {
-            q_el = new TcpEdgeListener(0, q_addresses);
+            q_el = new TcpEdgeListener(1, q_addresses);
           }
         }
         else if (item.type == "udp") {
@@ -227,7 +227,7 @@ namespace Brunet.Applications {
             q_el = new UdpEdgeListener(port, q_addresses);
           }
           catch {
-            q_el = new UdpEdgeListener(0, q_addresses);
+            q_el = new UdpEdgeListener(1, q_addresses);
           }
         }
         else {
@@ -401,7 +401,11 @@ namespace Brunet.Applications {
       BigInteger addr_j = addr % s_BIN;
       BigInteger addr_i = (addr - addr_j) / s_BIN;
       BigInteger q = addr_j * s_BIN + addr_i;
-      AHAddress q_addr = new AHAddress(q);
+      //AHAddress q_addr = new AHAddress(q);
+      byte[] target = Address.ConvertToAddressBuffer(q);
+      //Address.SetClass(target, _c_node.Address.Class);
+      Address.SetClass(target, a.Class);
+      AHAddress q_addr = new AHAddress(target);
       return q_addr;
     }
     /**
