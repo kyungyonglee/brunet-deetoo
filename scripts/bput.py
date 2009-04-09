@@ -1,6 +1,7 @@
 #!//usr/bin/python
 import xmlrpclib, getopt, sys
-pydht = xmlrpclib.Server('http://localhost:64221/xd.rem')
+pydht = xmlrpclib.Server('http://localhost:65221/query_xd.rem')
+
 #pydht = xmlrpclib.Server('http://128.227.56.152:64221/xd.rem')
 
 #usage:
@@ -8,6 +9,7 @@ pydht = xmlrpclib.Server('http://localhost:64221/xd.rem')
 # you must either have a value string, or an input.
 
 optlist, args = getopt.getopt(sys.argv[1:], "", ["ttl=", "input="])
+print optlist, args
 o_d = {}
 for k,v in optlist:
   o_d[k] = v

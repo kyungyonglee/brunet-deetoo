@@ -1,6 +1,6 @@
 #!//usr/bin/python
 import xmlrpclib, getopt, sys
-pydht = xmlrpclib.Server('http://localhost:64221/xd.rem')
+pydht = xmlrpclib.Server('http://localhost:65221/query_xd.rem')
 #pydht = xmlrpclib.Server('http://128.227.56.152:64221/xd.rem')
 
 #usage:

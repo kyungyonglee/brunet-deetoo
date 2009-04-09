@@ -510,7 +510,6 @@ namespace Brunet.Rpc {
       _xrm = new XmlRpcManager(_node, _rpc);
       _rpc.AddHandler("xmlrpc", _xrm);
       string svc_name = type + "xm.rem";
-      Console.WriteLine("svc_name: {0}",svc_name);
       RemotingServices.Marshal(_xrm, svc_name);
     }
   }

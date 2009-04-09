@@ -136,7 +136,8 @@ namespace Brunet.Applications {
       DateTime start_time = DateTime.UtcNow;
       // Keep creating new nodes no matter what!
       while(_running) {
-        CreateNode();
+        CreateNode("cache");
+        CreateNode("query");
         new Information(_c_node, "CacheNode");
         new Information(_q_node, "QueryNode");
         Console.Error.WriteLine("CacheNode is connected to {0} as {1}.  Current time is {2}.",
@@ -147,8 +148,18 @@ namespace Brunet.Applications {
         _q_node.DisconnectOnOverload = true;
         start_time = DateTime.UtcNow;
         StartServices();
-        _c_node.Connect();
-        _q_node.Connect();
+	Thread c_thread = new Thread(_c_node.Connect );
+	Console.WriteLine("new -----------------------");
+	c_thread.Start();
+	_q_node.Connect();
+	c_thread.Join();
+	/*
+	Thread q_thread = new Thread(_q_node.Connect );
+	q_thread.Start();
+        //_q_node.Connect();
+	_c_node.Connect();
+	q_thread.Join();
+	*/
         SuspendServices();
         if(!_running) {
           break;
@@ -176,102 +187,91 @@ namespace Brunet.Applications {
     local end points, specifying remote end points, and finally registering
     the dht.</remarks>
     */
-    public virtual void CreateNode() {
-      AHAddress c_address = (AHAddress) AddressParser.Parse(_c_node_config.NodeAddress);
-      _c_node = new StructuredNode(c_address, _c_node_config.BrunetNamespace);
-      AHAddress q_address = (AHAddress) AddressParser.Parse(_q_node_config.NodeAddress);
-      _q_node = new StructuredNode(q_address, _q_node_config.BrunetNamespace);
-      IEnumerable c_addresses = IPAddresses.GetIPAddresses(_c_node_config.DevicesToBind);
-      IEnumerable q_addresses = IPAddresses.GetIPAddresses(_q_node_config.DevicesToBind);
+    public virtual void CreateNode(string type) {
+      NodeConfig node_config = null;
+      StructuredNode current_node = null;
+      AHAddress address = null;
+      if (type == "cache") {
+        node_config = _c_node_config;
+        address = (AHAddress) AddressParser.Parse(node_config.NodeAddress);
+        current_node = new StructuredNode(address, node_config.BrunetNamespace);
+      }
+      else if ( type == "query" ) {
+        node_config = _q_node_config;
+        address = (AHAddress) AddressParser.Parse(node_config.NodeAddress);
+        current_node = new StructuredNode(address, node_config.BrunetNamespace);
+      }
+      else {
+        throw new Exception("Unrecognized node type: " + type);
+      }
+      IEnumerable addresses = IPAddresses.GetIPAddresses(node_config.DevicesToBind);
 
-      Brunet.EdgeListener c_el = null;
-      foreach(NodeConfig.EdgeListener item in _c_node_config.EdgeListeners) {
+      Brunet.EdgeListener el = null;
+      foreach(NodeConfig.EdgeListener item in node_config.EdgeListeners) {
         int port = item.port;
         if (item.type =="tcp") {
           try {
-            c_el = new TcpEdgeListener(port, c_addresses);
+            el = new TcpEdgeListener(port, addresses);
           }
           catch {
-            c_el = new TcpEdgeListener(0, c_addresses);
+            el = new TcpEdgeListener(0, addresses);
           }
         }
         else if (item.type == "udp") {
           try {
-            c_el = new UdpEdgeListener(port, c_addresses);
+            el = new UdpEdgeListener(port, addresses);
           }
           catch {
-            c_el = new UdpEdgeListener(0, c_addresses);
+            el = new UdpEdgeListener(0, addresses);
           }
         }
         else {
           throw new Exception("Unrecognized transport: " + item.type);
         }
-        _c_node.AddEdgeListener(c_el);
+	current_node.AddEdgeListener(el);
       }
-      c_el = new TunnelEdgeListener(_c_node);
-      _c_node.AddEdgeListener(c_el);
-
-      Brunet.EdgeListener q_el = null;
-      foreach(NodeConfig.EdgeListener item in _q_node_config.EdgeListeners) {
-        int port = item.port;
-        if (item.type =="tcp") {
-          try {
-            q_el = new TcpEdgeListener(port, q_addresses);
-          }
-          catch {
-            q_el = new TcpEdgeListener(1, q_addresses);
-          }
-        }
-        else if (item.type == "udp") {
-          try {
-            q_el = new UdpEdgeListener(port, q_addresses);
-          }
-          catch {
-            q_el = new UdpEdgeListener(1, q_addresses);
-          }
-        }
-        else {
-          throw new Exception("Unrecognized transport: " + item.type);
-        }
-        _q_node.AddEdgeListener(q_el);
-      }
-      q_el = new TunnelEdgeListener(_q_node);
-      _q_node.AddEdgeListener(q_el);
+      el = new TunnelEdgeListener(current_node);
+      current_node.AddEdgeListener(el);
 
       ArrayList RemoteTAs = null;
-      if(_c_node_config.RemoteTAs != null) {
+      if(node_config.RemoteTAs != null) {
         RemoteTAs = new ArrayList();
-        foreach(String ta in _c_node_config.RemoteTAs) {
+        foreach(String ta in node_config.RemoteTAs) {
           RemoteTAs.Add(TransportAddressFactory.CreateInstance(ta));
         }
-        _c_node.RemoteTAs = RemoteTAs;
-	_q_node.RemoteTAs = RemoteTAs;
+	current_node.RemoteTAs = RemoteTAs;
       }
 
       try {
-        if (_c_node_config.NCService.Enabled) {
-          _c_ncservice = new NCService(_c_node, _c_node_config.NCService.Checkpoint);
+        if (node_config.NCService.Enabled) {
+	  if (type == "cache") {
+            _c_ncservice = new NCService(current_node, node_config.NCService.Checkpoint);
+            if (node_config.NCService.OptimizeShortcuts) {
+              current_node.Sco.TargetSelector = new VivaldiTargetSelector(current_node, _c_ncservice);
+	    }
+	  }
+	  else {
+            _q_ncservice = new NCService(current_node, node_config.NCService.Checkpoint);
+            if (node_config.NCService.OptimizeShortcuts) {
+              current_node.Sco.TargetSelector = new VivaldiTargetSelector(current_node, _q_ncservice);
+	    }
+	  }
 
-          if (_c_node_config.NCService.OptimizeShortcuts) {
-            _c_node.Sco.TargetSelector = new VivaldiTargetSelector(_c_node, _c_ncservice);
-          }
         }
       } catch {}
-      try {
-        if (_q_node_config.NCService.Enabled) {
-          _q_ncservice = new NCService(_q_node, _q_node_config.NCService.Checkpoint);
 
-          if (_q_node_config.NCService.OptimizeShortcuts) {
-            _q_node.Sco.TargetSelector = new VivaldiTargetSelector(_q_node, _q_ncservice);
-          }
-        }
-      } catch {}
+      if (type == "cache") {
+        _c_dht = new Dht(current_node, 3, 20);
+        _cs = new CacheList(current_node);
+        current_node.MapReduce.SubscribeTask(new MapReduceCache(current_node,_cs));
+	_c_node = current_node;
+      }
+      else {
+        _q_dht = new Dht(current_node, 3, 20);
+        current_node.MapReduce.SubscribeTask(new MapReduceQuery(current_node,_cs));
+	_q_node = current_node;
+      }
 
-      _c_dht = new Dht(_c_node, 3, 20);
-      _q_dht = new Dht(_q_node, 3, 20);
-      _cs = new CacheList(_c_node);
-      _c_node.MapReduce.SubscribeTask(new MapReduceCache(_c_node,_cs));
-      _q_node.MapReduce.SubscribeTask(new MapReduceQuery(_q_node,_cs));
     }
 
     /**
@@ -284,7 +284,7 @@ namespace Brunet.Applications {
       if(_shutdown != null) {
         _shutdown.OnExit += OnExit;
       }
-
+      
       if(_c_node_config.RpcDht != null && _c_node_config.RpcDht.Enabled) {
         if(_c_ds == null) {
           _c_ds = new DhtServer(_c_node_config.RpcDht.Port);
@@ -300,14 +300,12 @@ namespace Brunet.Applications {
 
       if(_c_node_config.XmlRpcManager != null && _c_node_config.XmlRpcManager.Enabled) {
         if(_c_xrm == null) {
-          Console.WriteLine("port No.: {0}", _c_node_config.XmlRpcManager.Port);
           _c_xrm = new XmlRpcManagerServer(_c_node_config.XmlRpcManager.Port);
         }
         _c_xrm.Update(_c_node,"cache");
       }
       if(_q_node_config.XmlRpcManager != null && _q_node_config.XmlRpcManager.Enabled) {
         if(_q_xrm == null) {
-          Console.WriteLine("port No.: {0}", _q_node_config.XmlRpcManager.Port);
           _q_xrm = new XmlRpcManagerServer(_q_node_config.XmlRpcManager.Port);
         }
         _q_xrm.Update(_q_node,"query");

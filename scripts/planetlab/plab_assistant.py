@@ -172,11 +172,11 @@ class plab_assistant:
       ssh_cmd(base_ssh + "rm -rf /home/" + self.username + "/* &> /dev/null")
       ssh_cmd(base_ssh + "wget --quiet " + self.path_to_files + " -O ~/node.tgz")
       ssh_cmd(base_ssh + "tar -zxf node.tgz")
-      ssh_cmd(base_ssh + "/home/" + self.username + "/node/clean.sh &> /dev/null")
+      ssh_cmd(base_ssh + "/home/" + self.username + "/ipop/clean.sh &> /dev/null")
 
   # this won't end unless we force it to!  It should never take more than 20
   # seconds for this to run... or something bad happened.
-      cmd = base_ssh + " /home/" + self.username + "/node/start_node.sh &> /dev/null"
+      #cmd = base_ssh + " /home/" + self.username + "/ipop/start_node.sh &> /dev/null"
       pid = os.spawnvp(os.P_NOWAIT, 'ssh', cmd.split(' '))
       time.sleep(20)
       try:

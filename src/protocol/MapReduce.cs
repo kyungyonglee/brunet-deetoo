@@ -140,6 +140,9 @@ namespace Brunet {
           throw new AdrException(-32608, "No mapreduce task with name: " + task_name);          
         }
       }
+      else if ( method == "NetSize") {
+        _rpc.SendResult(req_state, _node.NetworkSize);
+      }
       else {
         throw new AdrException(-32601, "No Handler for method: " + method);
       }
