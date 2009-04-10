@@ -31,6 +31,8 @@ namespace Brunet {
    * a MapReduceComputation object.
    */
   public abstract class MapReduceTask {
+    // child's timeout is computed based on this fraction.
+    public static readonly double TIMEOUT_FRACTION = 0.9;
     protected static readonly object _class_lock = new object();
     protected static int _log_enabled = -1;
     public static bool LogEnabled {
@@ -179,12 +181,14 @@ namespace Brunet {
   public class MapReduceArgs {
     /** name of the task. */
     public readonly string TaskName;
-    /** argument to the map function. */
+    /** ergument to the map function. */
     public readonly object MapArg;
     /** argument to the tree generating function. */
     public readonly object GenArg;
     /** argument to the reduce function. */
     public readonly object ReduceArg;
+    /** timeout for the map-reduce task. -1 means infinite.*/
+    public readonly int MillisecTimeout;
 
     /**
      * Constructor
@@ -192,14 +196,24 @@ namespace Brunet {
     public MapReduceArgs(string task_name, 
                          object map_arg,
                          object gen_arg,
-                         object reduce_arg)
+                         object reduce_arg,
+	                 int millisec)
     {
       TaskName = task_name;
       MapArg = map_arg;
       GenArg = gen_arg;
       ReduceArg = reduce_arg;
+      MillisecTimeout = millisec;
     }
     
+    public MapReduceArgs(string task_name,
+		         object map_arg,
+			 object gen_arg,
+			 object reduce_arg): this(task_name,
+				                  map_arg,
+						  gen_arg,
+						  reduce_arg,
+						  -1) {}
     /**
      * Constructor
      */
@@ -208,6 +222,12 @@ namespace Brunet {
       MapArg =  ht["map_arg"];
       GenArg = ht["gen_arg"];
       ReduceArg = ht["reduce_arg"];
+      if (ht.ContainsKey("mstime")) {
+        MillisecTimeout = (int) ht["mstime"];
+      }
+      else {
+        MillisecTimeout = -1;
+      }
     }
     
     /**
@@ -219,6 +239,7 @@ namespace Brunet {
       ht["map_arg"] = MapArg;
       ht["gen_arg"] = GenArg;
       ht["reduce_arg"] = ReduceArg;
+      ht["mstime"] = MillisecTimeout;
       return ht;
     }
   }
@@ -279,6 +300,8 @@ namespace Brunet {
     //keep track of child computations.
     protected Hashtable _queue_to_child;
 
+    // start time
+    protected readonly DateTime _start_time;
     
     /** 
      * Constructor
@@ -299,11 +322,18 @@ namespace Brunet {
       _queue_to_child = new Hashtable();
       _sync = new object();
       _finished = false;
+      _start_time = DateTime.UtcNow;
+      //register with the node hearbeat to for computation to finish.
+      lock(_sync) {
+        _node.HeartBeatEvent += new EventHandler(this.CheckTimeout);
+      }
     }
     
     /** Starts the computation. */
     public void Start() {
       //invoke map
+      IDictionary rr = _map_result as IDictionary;
+      Console.WriteLine("before map, map result count: {0}", rr.Count );
       try {
         _map_result = _mr_task.Map(_mr_args.MapArg);
       } 
@@ -323,9 +353,12 @@ namespace Brunet {
       }
 
       //do an initial reduction and see if we can terminate
+      Console.WriteLine("after map: map result: {0}", rr.Count );
+
       try {
         bool done; //out parameter
         _reduce_result = _mr_task.Reduce(_mr_args.ReduceArg, null, new RpcResult(null, _map_result), out done);
+	Console.WriteLine("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
 
         if (LogEnabled) {
           ProtocolLog.Write(ProtocolLog.MapReduce,
@@ -446,11 +479,43 @@ namespace Brunet {
      * Sends the result of the computation back.
      */ 
     protected void SendResult(object result) {
+      //no more heartbeats
+      lock(_sync) {
+        _node.HeartBeatEvent -= new EventHandler(CheckTimeout);
+      }
       if (LogEnabled) {
         ProtocolLog.Write(ProtocolLog.MapReduce,        
                           String.Format("MapReduce: {0}, sending back result: {1}.", _node.Address, result));
       }
       _rpc.SendResult(_mr_request_state, result);
+    }
+    /**
+     * Invoked periodically, checks to see if the task has been running to long.
+     * If yes, finish the task and send back result. 
+     */
+    protected void CheckTimeout(object o, EventArgs args) 
+    {
+      bool send_result = false;
+      object result = null;
+      lock(_sync) {
+        if (!_finished) {//if we have actually finished or this might have been a residual heartbeat
+          int millisec_elapsed = (int) (DateTime.UtcNow - _start_time).TotalMilliseconds;
+          if (_mr_args.MillisecTimeout >= 0 && millisec_elapsed > _mr_args.MillisecTimeout) {
+            _finished = true;
+            send_result = true;
+	    result = _reduce_result;
+          }
+        }
+      }
+      
+      //once we get here no one will write to the reduce result
+      if (send_result) {
+        if (LogEnabled) {
+          ProtocolLog.Write(ProtocolLog.MapReduce,        
+                            String.Format("MapReduce: {0}, child-computation timeout.", _node.Address));
+        }
+        SendResult(result);
+      }
     }
   }
 }

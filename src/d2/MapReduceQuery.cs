@@ -54,7 +54,7 @@ namespace Brunet.Deetoo {
       }
       my_entry["count"] = 1;
       my_entry["height"] = 1;
-      //Console.WriteLine("map result: {0}", (my_entry["query_result"]).GetType());
+      Console.WriteLine("in map: map_result.count: {0}", my_entry.Count);
       return my_entry;
     }
     
@@ -65,44 +65,48 @@ namespace Brunet.Deetoo {
       done = false;
       //ISender child_sender = child_rpc.ResultSender;
       string query_type = (string)reduce_arg;
-      object child_result = child_rpc.Result;
+      object child_result = null;
+      try {
+        child_result = child_rpc.Result;
+      }
+      catch {
+        throw new Exception("no matching rpc result.");
+      }
       //child result is a valid result
       if (current_result == null) {
         return child_result;
       }
-      else {
-        // if this is exact matching and we have current result, 
-        // return current result immediately.
-        if (query_type == "exact") {
-	  done = true;
-          return current_result;
-        }
-	else if(query_type == "regex") {
-          //the following can throw an exception, will be handled by the framework
-          IDictionary my_entry = current_result as IDictionary;
-          IDictionary value = child_result as IDictionary;
-          int max_height = (int) (my_entry["height"]);
-          int count = (int) (my_entry["count"]);
-          //int hits = (int) my_entry["hits"];
-          ArrayList q_result = (ArrayList)(my_entry["query_result"]);
-	  //Console.WriteLine("Q6_0--------------------q_result: {0}", q_result.GetType());
-	  //Console.WriteLine("Q6--------------------value[query_result]: {0}", (value["query_result"]).GetType());
+      // if this is exact matching and we have current result, 
+      // return current result immediately.
+      if (query_type == "exact") {
+        done = true;
+        return current_result;
+      }
+      else if(query_type == "regex") {
+        //the following can throw an exception, will be handled by the framework
+        IDictionary my_entry = current_result as IDictionary;
+        IDictionary value = child_result as IDictionary;
+        int max_height = (int) (my_entry["height"]);
+        int count = (int) (my_entry["count"]);
+        //int hits = (int) my_entry["hits"];
+        ArrayList q_result = (ArrayList)(my_entry["query_result"]);
+	//Console.WriteLine("Q6_0--------------------q_result: {0}", q_result.GetType());
+	//Console.WriteLine("Q6--------------------value[query_result]: {0}", (value["query_result"]).GetType());
 	
-          ArrayList c_result = (ArrayList)(value["query_result"]);
-          q_result.AddRange(c_result);
-          my_entry["query_result"] = q_result;
-          int y = (int) value["count"];
-          my_entry["count"] = count + y;
-          int z = (int) value["height"] + 1;
-          if (z > max_height) {
-            my_entry["height"] = z; 
-          }
-          //int x = (int) value["no_hit"] + hits;
-          return my_entry;
-	}
-	else {
-          throw new AdrException(-32608, "This query type {0} is supported." + query_type);
-	}
+        ArrayList c_result = (ArrayList)(value["query_result"]);
+        q_result.AddRange(c_result);
+        my_entry["query_result"] = q_result;
+        int y = (int) value["count"];
+        my_entry["count"] = count + y;
+        int z = (int) value["height"] + 1;
+        if (z > max_height) {
+          my_entry["height"] = z; 
+        }
+        //int x = (int) value["no_hit"] + hits;
+        return my_entry;
+      }
+      else {
+        throw new AdrException(-32608, "This query type {0} is supported." + query_type);
       }
     }
   }

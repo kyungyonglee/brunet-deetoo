@@ -149,7 +149,6 @@ namespace Brunet.Applications {
         start_time = DateTime.UtcNow;
         StartServices();
 	Thread c_thread = new Thread(_c_node.Connect );
-	Console.WriteLine("new -----------------------");
 	c_thread.Start();
 	_q_node.Connect();
 	c_thread.Join();

@@ -44,8 +44,19 @@ namespace Brunet {
       ConnectionList structs = tab.GetConnections(ConnectionType.Structured);
       Connection next_closest = structs.GetNearestTo((AHAddress) _node.Address, a);
       if (next_closest != null) {
+        int timeout = -1;
+        if (mr_args.MillisecTimeout >= 0) { //only if it is a valid timeout
+          timeout = (int) (TIMEOUT_FRACTION*mr_args.MillisecTimeout);
+        }
+
         MapReduceInfo mr_info = new MapReduceInfo( (ISender) next_closest.Edge,
-                                                   mr_args); //arguments do not change at all
+                                                   new MapReduceArgs(this.TaskName,//arguments do not change much
+                                                                     mr_args.MapArg,
+                                                                     mr_args.GenArg,
+                                                                     mr_args.ReduceArg,
+                                                                     timeout));//only timeout changes
+
+
         retval.Add(mr_info);
       }
       
@@ -85,6 +96,12 @@ namespace Brunet {
       ConnectionTable tab = _node.ConnectionTable;
       ConnectionList structs = tab.GetConnections(ConnectionType.Structured);
       ArrayList retval = new ArrayList();
+      int timeout = -1;
+      if (mr_args.MillisecTimeout >= 0) { //only if it is a valid timeout
+        timeout = (int) (TIMEOUT_FRACTION*mr_args.MillisecTimeout);
+      }
+
+
       if (InRange(this_addr, start_addr, end_addr)) {
 	if (structs.Count > 0) {
           //make connection list in the range.
@@ -103,8 +120,8 @@ namespace Brunet {
 	    PrintConnectionList(right_cons);
 	  }
 	  */
-	  retval = GenerateTreeInRange(this_addr, start_addr, end_addr, left_cons, true, mr_args);
-	  ArrayList ret_right = GenerateTreeInRange(this_addr, start_addr, end_addr, right_cons, false, mr_args);
+	  retval = GenerateTreeInRange(this_addr, start_addr, end_addr, left_cons, true, mr_args, timeout);
+	  ArrayList ret_right = GenerateTreeInRange(this_addr, start_addr, end_addr, right_cons, false, mr_args, timeout);
 	  retval.AddRange(ret_right);
 	}
 	else {  //this node is a leaf node.
@@ -115,13 +132,13 @@ namespace Brunet {
 	//Console.WriteLine("````````````retval.Count: {0}",retval.Count);
       }
       else { // _node is out of range. Just pass it to the closest to the middle of range.
-        retval = GenerateTreeOutRange(start_addr, end_addr, mr_args);
+        retval = GenerateTreeOutRange(start_addr, end_addr, mr_args, timeout);
         //Console.WriteLine("-----OUT RANGE++++++  ----------");
       }
       return (MapReduceInfo[]) retval.ToArray(typeof(MapReduceInfo));
     }
 
-    private ArrayList GenerateTreeInRange(AHAddress this_addr, AHAddress start, AHAddress end, List<Connection> cons, bool left, MapReduceArgs mr_args) {
+    private ArrayList GenerateTreeInRange(AHAddress this_addr, AHAddress start, AHAddress end, List<Connection> cons, bool left, MapReduceArgs mr_args, int timeout) {
       //Divide the range and trigger bounded broadcasting again in divided range starting with neighbor.
       //Deivided ranges are (start, n_1), (n_1, n_2), ... , (n_m, end)
       ArrayList retval = new ArrayList();
@@ -167,7 +184,9 @@ namespace Brunet {
 	 		                              new MapReduceArgs(this.TaskName,
 					               	             mr_args.MapArg,
 								     gen_arg,
-								     mr_args.ReduceArg));
+								     mr_args.ReduceArg,
+								     timeout // timeout
+								     ));
           Log("{0}: {1}, adding address: {2} to sender list, range start: {3}, range end: {4}",
 				    this.TaskName, _node.Address, next_c.Address,
 				    gen_arg[0], gen_arg[1]);
@@ -177,7 +196,7 @@ namespace Brunet {
       }
       return retval;
     }    
-    private ArrayList GenerateTreeOutRange(AHAddress start, AHAddress end, MapReduceArgs mr_args) {
+    private ArrayList GenerateTreeOutRange(AHAddress start, AHAddress end, MapReduceArgs mr_args, int timeout) {
       ArrayList retval = new ArrayList();
       BigInteger up = start.ToBigInteger();
       BigInteger down = end.ToBigInteger();
@@ -199,7 +218,7 @@ namespace Brunet {
 				                new MapReduceArgs(this.TaskName,
 							          mr_args.MapArg,
 								  gen_arg,
-								  mr_args.ReduceArg));
+								  timeout));
 	Log("{0}: {1}, out of range, moving to the closest node to mid_range: {2} to target node, range start: {3}, range end: {4}",
 			  this.TaskName, _node.Address, mid_addr, start, end);
 	retval.Add(mr_info);

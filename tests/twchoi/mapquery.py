@@ -9,14 +9,14 @@ q = sys.argv[4]
 print q_type
 #print typeof(q_type)
 
-rg = math.sqrt(alpha * 2**160 / net_size)
+rg = math.sqrt(alpha /net_size) * 2**160
 print 2**160
 print 'rg', rg
 start_addr = 1
 while start_addr %2 != 0: 
   start_addr = random.randint(0, 2**160 -1)
 print start_addr
-end_addr = start_addr - 2; 
+end_addr = start_addr + rg 
 start = Address(start_addr)
 end = Address(end_addr)
 rg_start = start.str
@@ -25,8 +25,9 @@ print 'addrs', start_addr, end_addr
 print 'minus   ',end_addr - start_addr
 print 'distance',start.DistanceTo(end)
 print rg_start, rg_end
-#URL = "http://127.0.0.1:20000/queryxm.rem"
-URL = "http://ricepl-3.cs.rice.edu:9846/queryxm.rem"
+URL = "http://127.0.0.1:20000/queryxm.rem"
+#URL = "http://ricepl-3.cs.rice.edu:9846/queryxm.rem"
+#URL = "http://ricepl-3.cs.rice.edu:9846/queryxm.rem"
 rpc = xmlrpclib.Server(URL)
 nei = rpc.localproxy("sys:link.GetNeighbors")
 #cache_entry = rpc.localproxy("")
