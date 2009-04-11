@@ -332,8 +332,7 @@ namespace Brunet {
     /** Starts the computation. */
     public void Start() {
       //invoke map
-      IDictionary rr = _map_result as IDictionary;
-      Console.WriteLine("before map, map result count: {0}", rr.Count );
+      //Console.WriteLine("before map, map result count: {0}", rr.Count );
       try {
         _map_result = _mr_task.Map(_mr_args.MapArg);
       } 
@@ -353,12 +352,15 @@ namespace Brunet {
       }
 
       //do an initial reduction and see if we can terminate
-      Console.WriteLine("after map: map result: {0}", rr.Count );
+      //IDictionary rr = _map_result as IDictionary;
+      //Console.WriteLine("after map: map result: {0}", rr.Count );
 
       try {
         bool done; //out parameter
+	Console.WriteLine("111111111111");
         _reduce_result = _mr_task.Reduce(_mr_args.ReduceArg, null, new RpcResult(null, _map_result), out done);
-	Console.WriteLine("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+	Console.WriteLine("222222222222");
+
 
         if (LogEnabled) {
           ProtocolLog.Write(ProtocolLog.MapReduce,

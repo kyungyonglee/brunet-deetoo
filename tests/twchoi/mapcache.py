@@ -23,8 +23,8 @@ print 'addrs', start_addr, end_addr
 print 'minus   ',end_addr - start_addr
 print 'distance',start.DistanceTo(end)
 print rg_start, rg_end
-URL = "http://planet1.elte.hu:9845/cachexm.rem"
-#URL = "http://127.0.0.1:10000/cachexm.rem"
+#URL = "http://planet1.elte.hu:9845/cachexm.rem"
+URL = "http://127.0.0.1:10000/cachexm.rem"
 rpc = xmlrpclib.Server(URL)
 nei = rpc.localproxy("sys:link.GetNeighbors")
 #cache_entry = rpc.localproxy("")

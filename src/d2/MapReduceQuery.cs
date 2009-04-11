@@ -54,7 +54,7 @@ namespace Brunet.Deetoo {
       }
       my_entry["count"] = 1;
       my_entry["height"] = 1;
-      Console.WriteLine("in map: map_result.count: {0}", my_entry.Count);
+      //Console.WriteLine("in map: map_result.count: {0}", my_entry.Count);
       return my_entry;
     }
     
@@ -70,39 +70,48 @@ namespace Brunet.Deetoo {
         child_result = child_rpc.Result;
       }
       catch {
-        throw new Exception("no matching rpc result.");
+        throw new Exception("no rpc result.");
       }
       //child result is a valid result
       if (current_result == null) {
         return child_result;
       }
-      // if this is exact matching and we have current result, 
-      // return current result immediately.
-      if (query_type == "exact") {
-        done = true;
-        return current_result;
+      IDictionary my_entry = current_result as IDictionary;
+      IDictionary value = child_result as IDictionary;
+      int max_height = (int) (my_entry["height"]);
+      int count = (int) (my_entry["count"]);
+      int y = (int) value["count"];
+      my_entry["count"] = count + y;
+      int z = (int) value["height"] + 1;
+      if (z > max_height) {
+        my_entry["height"] = z; 
       }
-      else if(query_type == "regex") {
-        //the following can throw an exception, will be handled by the framework
-        IDictionary my_entry = current_result as IDictionary;
-        IDictionary value = child_result as IDictionary;
-        int max_height = (int) (my_entry["height"]);
-        int count = (int) (my_entry["count"]);
-        //int hits = (int) my_entry["hits"];
+      if (query_type == "exact") {
+        string m_result = (string)(my_entry["query_result"]);
+	//string c_result = (string)(value["query_result"]);
+	//Console.WriteLine("m_result: {0}, c_result: {1}", m_result, c_result);
+	if (m_result != null) {
+          //Console.WriteLine("m_result is not null");
+	  // if query type is exact matching and current result is not null
+	  // stop searching and return the result immediately.
+	  done = true;
+	}
+	/*
+	else {
+	  if (c_result != null) {
+            //Console.WriteLine("c_result is not null");
+            done = true;
+	    my_entry["query_result"] = c_result;
+	  }
+	}
+	*/
+	return my_entry;
+      }
+      else if (query_type == "regex") {
         ArrayList q_result = (ArrayList)(my_entry["query_result"]);
-	//Console.WriteLine("Q6_0--------------------q_result: {0}", q_result.GetType());
-	//Console.WriteLine("Q6--------------------value[query_result]: {0}", (value["query_result"]).GetType());
-	
         ArrayList c_result = (ArrayList)(value["query_result"]);
         q_result.AddRange(c_result);
         my_entry["query_result"] = q_result;
-        int y = (int) value["count"];
-        my_entry["count"] = count + y;
-        int z = (int) value["height"] + 1;
-        if (z > max_height) {
-          my_entry["height"] = z; 
-        }
-        //int x = (int) value["no_hit"] + hits;
         return my_entry;
       }
       else {
