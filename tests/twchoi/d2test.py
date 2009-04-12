@@ -81,7 +81,7 @@ def cacheAction(c_in_file, alpha):
   #cache_result = []
   c_ht["task_name"]="Brunet.Deetoo.MapReduceCache"
   print '#time		object	max_size	guesssize	count	depth	response_time\n'
-  c_res_file.write('#time		string	max_size	guesssize	count	depth	response_time\n')
+  c_res_file.write('#time		object		max_n	g_size	count	depth	response_time\n')
   for i in xrange(2):
     time.sleep(600)
     rpc, guess_size, max_size = getRandomNode(c_in_file)
@@ -119,7 +119,7 @@ def queryAction(input_list, q_in_file, alpha, q_type):
   #query_result = []
   qht["task_name"]="Brunet.Deetoo.MapReduceQuery"
   print 'time		object	max_size	guess_size	hit	count	depth	response_time\n'
-  q_out_file.write('#time		object	max_size	guess_size	hit	count	depth	response_time\n')
+  q_out_file.write('#time		object		max_n	g_size	hit	count	depth	response_time\n')
   for q in input_list:
     for it in xrange(2):
       rpc, guess_size, max_size = getRandomNode(q_in_file, True)
