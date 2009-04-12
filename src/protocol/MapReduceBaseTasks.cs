@@ -218,6 +218,7 @@ namespace Brunet {
 				                new MapReduceArgs(this.TaskName,
 							          mr_args.MapArg,
 								  gen_arg,
+                                                                  mr_args.ReduceArg,
 								  timeout));
 	Log("{0}: {1}, out of range, moving to the closest node to mid_range: {2} to target node, range start: {3}, range end: {4}",
 			  this.TaskName, _node.Address, mid_addr, start, end);

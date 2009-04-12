@@ -357,9 +357,7 @@ namespace Brunet {
 
       try {
         bool done; //out parameter
-	Console.WriteLine("111111111111");
         _reduce_result = _mr_task.Reduce(_mr_args.ReduceArg, null, new RpcResult(null, _map_result), out done);
-	Console.WriteLine("222222222222");
 
 
         if (LogEnabled) {

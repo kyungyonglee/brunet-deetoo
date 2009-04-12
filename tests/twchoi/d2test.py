@@ -3,8 +3,22 @@ from pybru import *
 import string, time
 import sys, xmlrpclib, random,math,base64
 
+usage = """usage: python d2test.py installed_nodes_file_name alpha query_type """
+def main():
+  """ Default starting point"""
+  try:
+    file_name = sys.argv[1] # This file contains list of hostnames which have deetoonode installed
+    alpha = (float)(sys.argv[2]) #replication factor, determines bounded broadcasting range
+    query_type = sys.argv[3] #'exact' for exact match or 'regex' for regular expression search
+  except:
+    print usage
+    return
+  input_objects = cacheAction(file_name, alpha)
+  #time.sleep(1)  #time interval between caching and querying
+  #print 'start query action'
+  queryAction(input_objects, file_name, alpha, query_type)
 
-def choice():
+def char_choice():
   """return one letter or digit randomly"""
   s = string.letters + string.digits
   length = len(s)
@@ -13,10 +27,11 @@ def choice():
 
 def RStringGenerator(length=10):
   """ramdom string generator"""
-  return ''.join([choice() for i in range(length)])
+  return ''.join([char_choice() for i in range(length)])
 
 def getRange(net_size, alpha):
   """returns start and end of range given replication factor"""
+  # size of bounded broadcasting range (=\sqrt(\alpha / net_size) * addr_bin_size)
   rg = (int)(math.sqrt(alpha / (float)(net_size)) * 2**160)
   start_addr = 1
   while start_addr %2 != 0:
@@ -28,70 +43,114 @@ def getRange(net_size, alpha):
   rg_end = end.str
   return rg_start, rg_end
 
-#def node_choice(getNodes()):
-#  return nodes[random.randrange(len(nodes))]
+def getRandomNode(file_name, query=False):
+  """ return random node's url from the list of 
+  deetoo installed plab nodes.
+  file_name is list of nodes' hostname which installed deetoo
+  if query is False, url is for caching node,
+  otherwise, url is for querying node.
+  """
+  url = 0
+  net_size = 0
+  node_file = open(file_name,'r')
+  nodes = [nd.split()[0] for nd in node_file] # hostnames
+  max_net_size = len(nodes)
+  port = 9845  #port number for cache node
+  svc = "cache"  #name of service 
+  if query:
+    port = 9846  # port number for query node
+    svc = "query" # name of service
+  while (url==0 or net_size==0):
+    try:
+      selected_node = nodes[random.randrange(len(nodes))] # select one live node from the list 
+      url = "http://" + selected_node + ":" + str(port) + "/" + svc + "xm.rem"
+      rpc = xmlrpclib.Server(url) # ser xmlrpc server
+      net_size = rpc.localproxy("mapreduce.NetSize")  # estimated network size (StructuredNode.GetSize)
+    except:
+      continue
+  return rpc, net_size, max_net_size
 
-#def getNodes():
-#  plab_rpc = xmlrpclib.ServerProxy('https://www.planet-lab.org/PLCAPI/',allow_none=True)
-#  nodes = []
-#  for node in plab_rpc.GetNodes({'AuthMethod': "anonymous"}, {}, ['hostname']):
-#    nodes.append(node)
-#  return nodes
+def cacheAction(c_in_file, alpha):
+  """ insert 100 random string(lenth=10) into a random node.
+      time interval between insertions is 600 sec(10 min)."""
+  
+  c_res_file = open("c_res.dat",'w') #caching output file
+  c_ht = {} # hashtable for cache
+  input_list = [] # list of inserted objects, will be passed to queryAction
+  #cache_result = []
+  c_ht["task_name"]="Brunet.Deetoo.MapReduceCache"
+  #print '#time		object	max_size	guesssize	count	depth	response_time\n'
+  c_res_file.write('#time		string	max_size	guesssize	count	depth	response_time\n')
+  for i in xrange(2):
+    time.sleep(600)
+    rpc, guess_size, max_size = getRandomNode(c_in_file)
+    rg_start, rg_end = getRange(guess_size, alpha) #randomly selected range
+    input = RStringGenerator() #input object
+    c_ht["gen_arg"]=[rg_start,rg_end]
+    c_ht["map_arg"]=[input,alpha,rg_start,rg_end]
+    #time.sleep(60)
+    b_time = time.time()  #current time at caching started
+    result = rpc.localproxy("mapreduce.Start",c_ht) #result returns hop_count and tree depth
+    a_time = time.time()  #current time at caching finished
+    res_time = a_time - b_time  #response time
+    try: # see if mapreduce is timeout, if so, it returns nothing
+      count = result['count']
+      depth = result['height']
+      input_list.append(input)
+      #print b_time, '\t', input, '\t',max_size, '\t', guess_size, '\t',count, '\t', depth, '\t', res_time
+      out_str = str(b_time) + '\t' + input + '\t' + str(max_size) + '\t' + str(guess_size) +'\t' + str(count) + '\t' + str(depth) + '\t' + str(res_time) +'\n'
+      c_res_file.write(out_str)
+    except:
+      out_str = 'time out\t' + str(res_time) + '\n'
+      c_res_file.write(out_str)
+      continue
+  c_res_file.close()
+  return input_list
 
-alpha = (float)(sys.argv[1])
-
-URL = "http://planetlab2.ece.ucdavis.edu:10000/xm.rem"
-rpc = xmlrpclib.Server(URL)
-net_size = rpc.localproxy("mapreduce.NetSize")
-print net_size
-
-cht = {}
-input_list = []
-cache_result = []
-cht["task_name"]="Brunet.Deetoo.MapReduceCache"
-print 'cache-----------'
-print 'netsize	count	depth'
-for i in xrange(10):
-  rg_start, rg_end = getRange(net_size, alpha)
-  #print rg_start, rg_end
-  input = RStringGenerator()
-  input_list.append(input)
-  cht["gen_arg"]=[rg_start,rg_end]
-  cht["map_arg"]=[input,alpha,rg_start,rg_end]
-  time.sleep(6)
-  result = rpc.localproxy("mapreduce.Start",cht)
-  count = result['count']
-  depth = result['height']
-  print net_size, '\t',count, '\t', depth
-  #cache_result.append(result)
-#print "caching results"
-#print cache_result
-#End of Caching
-
-#start querying
-URL = "http://127.0.0.1:20000/queryxm.rem"
-rpc = xmlrpclib.Server(URL)
-net_size = rpc.localproxy("mapreduce.NetSize")
-qht = {}
-query_result = []
-hit = 0
-print 'query---------'
-print 'object	size	hit	count	depth'
-for q in input_list:
-  rg_start, rg_end = getRange(net_size, alpha)
-  #q_type = "exact"
-  q_type = "regex"
+def queryAction(input_list, q_in_file, alpha, q_type):
+  """querying
+  send queries for inserted string objects 100 times each
+  """
+  qht = {} #hashtable for query, input argument of MapRedeceQuery
+  q_out_file = open("q_res.dat", 'w') # query output file
+  #query_result = []
   qht["task_name"]="Brunet.Deetoo.MapReduceQuery"
-  qht["gen_arg"]=[rg_start,rg_end]
-  qht["map_arg"]=[q,q_type]
-  qht["reduce_arg"]=q_type
-  time.sleep(5)
-  result = rpc.localproxy("mapreduce.Start",qht)
-  count = result['count']
-  depth = result['height']
-  if len(result['query_result']) != 0:
-    hit = 1
-  print q, '\t', net_size, '\t', hit, '\t', count, '\t', depth
-  #query_result.append(result)
-#print "querying result"
-#print query_result
+  #print 'time		object	max_size	guess_size	hit	count	depth	response_time\n'
+  q_out_file.write('#time		object	max_size	guess_size	hit	count	depth	response_time\n')
+  for q in input_list:
+    for it in xrange(2):
+      rpc, guess_size, max_size = getRandomNode(q_in_file, True)
+      rg_start, rg_end = getRange(guess_size, alpha)
+      qht["gen_arg"]=[rg_start,rg_end]
+      qht["map_arg"]=[q,q_type]
+      qht["reduce_arg"]=q_type
+      #time.sleep(1800)     #give 30 minutes of suspension between queries
+      b_time = time.time()
+      result = rpc.localproxy("mapreduce.Start",qht)
+      a_time = time.time()
+      response_time = a_time - b_time
+      try:
+        count = result['count']
+        depth = result['height']
+        q_result = result['query_result']
+	#print 'query_result', q_result
+        hit = 0
+        if (q_type == 'exact'):
+	  if q_result != '':
+	    hit = 1
+        elif q_type == 'regex':
+	  if len(q_result) != 0:
+            hit = 1
+        else:
+	  print "no matching search option for ", q_type
+	  return
+        #print b_time, '\t', q, '\t', max_size, '\t', guess_size, '\t', hit, '\t', count, '\t', depth, '\t', response_time
+        out_str = str(b_time) + '\t' + q + '\t' + str(max_size) + '\t' + str(guess_size) + '\t' + str(hit) + '\t' + str(count) + '\t' + str(depth) + '\t' + str(response_time) + '\n'
+        q_out_file.write(out_str)
+      except:
+	out_str = "time out\t" + str(response_time) + '\n'
+	q_out_file.write(out_str)
+  q_out_file.close()
+
+if __name__ == "__main__":
+  main()
