@@ -46,7 +46,7 @@ namespace Brunet
 
     protected readonly IEnumerable _tas;
 
-    protected readonly SingleReaderLockFreeQueue<SocketStateAction> ActionQueue;
+    protected readonly LockFreeQueue<SocketStateAction> ActionQueue;
    
     /**
      * This class holds all the mutable state about the sockets we are working
@@ -83,12 +83,13 @@ namespace Brunet
       public readonly ArrayList WriteSocks;
       public readonly Socket ListenSock;
       public readonly BufferAllocator BA;
+      public readonly TcpEdgeListener TEL;
 
-      public SocketState(Socket listensock) {
+      public SocketState(TcpEdgeListener tel) {
         _sock_to_rs = new Hashtable();
         _sock_to_constate = new ListDictionary();
         _con_socks = new ArrayList();
-        ListenSock = listensock;
+        ListenSock = tel._listen_sock;
         _socks_to_send = new ArrayList();
         AllSockets = new ArrayList();
         ReadSocks = new ArrayList();
@@ -98,12 +99,14 @@ namespace Brunet
         /* Use a shared BufferAllocator for all Edges */
         BA = new BufferAllocator(2 + Packet.MaxLength);
         ListenSock.Listen(10);
+        TEL = tel;
       }
       public void AddEdge(TcpEdge e) {
         Socket s = e.Socket;
         AllSockets.Add(s); 
         ReceiveState rs = new ReceiveState(e, BA);
         _sock_to_rs[s] = rs;
+        Interlocked.Increment(ref TEL._count);
       }
       public void AddSendWaiter(Socket s) {
         if( _socks_to_send.Contains(s) == false ) {
@@ -171,6 +174,7 @@ namespace Brunet
         _sock_to_rs = new_s_to_rs;
         AllSockets.Remove(s); 
         _socks_to_send.Remove(s);
+        Interlocked.Decrement(ref TEL._count);
         //We shouldn't be sending at the same time:
         lock( e ) {
           //We need to shutdown the socket:
@@ -244,6 +248,11 @@ namespace Brunet
       }
     }
 
+    protected int _count;
+    //Return the number of TcpEdge objects we currently have.
+    public override int Count {
+      get { return _count; }
+    }
 
     public override IEnumerable LocalTAs
     {
@@ -307,7 +316,7 @@ namespace Brunet
       _listen_sock.Bind(tmp_ep);
       _local_endpoint = (IPEndPoint) _listen_sock.LocalEndPoint;
       port = _local_endpoint.Port;
-
+      _count = 0;
       /**
        * We get all the IPAddresses for this computer
        */
@@ -325,7 +334,7 @@ namespace Brunet
       }
       _loop = new Thread( this.SelectLoop );
       //This is how we push jobs into the SelectThread
-      ActionQueue = new SingleReaderLockFreeQueue<SocketStateAction>();
+      ActionQueue = new LockFreeQueue<SocketStateAction>();
     }
 
     /* //////////////////////////
@@ -347,9 +356,9 @@ namespace Brunet
      */
     protected class CloseAction : SocketStateAction {
       protected readonly TcpEdge _e;
-      protected readonly SingleReaderLockFreeQueue<SocketStateAction> _queue;
+      protected readonly LockFreeQueue<SocketStateAction> _queue;
 
-      public CloseAction(TcpEdge e, SingleReaderLockFreeQueue<SocketStateAction> q) {
+      public CloseAction(TcpEdge e, LockFreeQueue<SocketStateAction> q) {
         _e = e;
         _queue = q;
       }
@@ -511,9 +520,9 @@ namespace Brunet
     protected class LogAction : SocketStateAction {
       protected DateTime _last_debug;
       protected readonly TimeSpan _debug_period;
-      protected readonly SingleReaderLockFreeQueue<SocketStateAction> _q;
+      protected readonly LockFreeQueue<SocketStateAction> _q;
 
-      public LogAction(TimeSpan interval, SingleReaderLockFreeQueue<SocketStateAction> q) {
+      public LogAction(TimeSpan interval, LockFreeQueue<SocketStateAction> q) {
         _last_debug = DateTime.UtcNow;
         _debug_period = interval;
         _q = q;
@@ -775,7 +784,7 @@ namespace Brunet
 
       //No one can see this except this thread, so there is no
       //need for thread synchronization
-      SocketState ss = new SocketState(_listen_sock);
+      SocketState ss = new SocketState(this);
       ss.TAA = _ta_auth;
 
       if( ProtocolLog.Monitor.Enabled ) {
