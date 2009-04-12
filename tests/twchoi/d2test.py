@@ -74,12 +74,13 @@ def cacheAction(c_in_file, alpha):
   """ insert 100 random string(lenth=10) into a random node.
       time interval between insertions is 600 sec(10 min)."""
   
+  print '----------caching----------------'
   c_res_file = open("c_res.dat",'w') #caching output file
   c_ht = {} # hashtable for cache
   input_list = [] # list of inserted objects, will be passed to queryAction
   #cache_result = []
   c_ht["task_name"]="Brunet.Deetoo.MapReduceCache"
-  #print '#time		object	max_size	guesssize	count	depth	response_time\n'
+  print '#time		object	max_size	guesssize	count	depth	response_time\n'
   c_res_file.write('#time		string	max_size	guesssize	count	depth	response_time\n')
   for i in xrange(2):
     time.sleep(600)
@@ -97,11 +98,12 @@ def cacheAction(c_in_file, alpha):
       count = result['count']
       depth = result['height']
       input_list.append(input)
-      #print b_time, '\t', input, '\t',max_size, '\t', guess_size, '\t',count, '\t', depth, '\t', res_time
+      print b_time, '\t', input, '\t',max_size, '\t', guess_size, '\t',count, '\t', depth, '\t', res_time
       out_str = str(b_time) + '\t' + input + '\t' + str(max_size) + '\t' + str(guess_size) +'\t' + str(count) + '\t' + str(depth) + '\t' + str(res_time) +'\n'
       c_res_file.write(out_str)
     except:
       out_str = 'time out\t' + str(res_time) + '\n'
+      print 'timeout'
       c_res_file.write(out_str)
       continue
   c_res_file.close()
@@ -111,11 +113,12 @@ def queryAction(input_list, q_in_file, alpha, q_type):
   """querying
   send queries for inserted string objects 100 times each
   """
+  print '---------------querying----------------'
   qht = {} #hashtable for query, input argument of MapRedeceQuery
   q_out_file = open("q_res.dat", 'w') # query output file
   #query_result = []
   qht["task_name"]="Brunet.Deetoo.MapReduceQuery"
-  #print 'time		object	max_size	guess_size	hit	count	depth	response_time\n'
+  print 'time		object	max_size	guess_size	hit	count	depth	response_time\n'
   q_out_file.write('#time		object	max_size	guess_size	hit	count	depth	response_time\n')
   for q in input_list:
     for it in xrange(2):
@@ -133,7 +136,7 @@ def queryAction(input_list, q_in_file, alpha, q_type):
         count = result['count']
         depth = result['height']
         q_result = result['query_result']
-	#print 'query_result', q_result
+	print 'query_result', q_result
         hit = 0
         if (q_type == 'exact'):
 	  if q_result != '':
@@ -144,7 +147,7 @@ def queryAction(input_list, q_in_file, alpha, q_type):
         else:
 	  print "no matching search option for ", q_type
 	  return
-        #print b_time, '\t', q, '\t', max_size, '\t', guess_size, '\t', hit, '\t', count, '\t', depth, '\t', response_time
+        print b_time, '\t', q, '\t', max_size, '\t', guess_size, '\t', hit, '\t', count, '\t', depth, '\t', response_time
         out_str = str(b_time) + '\t' + q + '\t' + str(max_size) + '\t' + str(guess_size) + '\t' + str(hit) + '\t' + str(count) + '\t' + str(depth) + '\t' + str(response_time) + '\n'
         q_out_file.write(out_str)
       except:
