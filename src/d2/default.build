@@ -17,13 +17,8 @@
       </sources>
       <references>
         <include name="${build.dir}/Brunet.dll" />
-        <include name="nunit.framework.dll" />
       </references>
     </csc>
-    <nunit2>
-      <formatter type="Plain" />
-      <test assemblyname="${build.dir}/Brunet.Deetoo.Test.dll"/>
-    </nunit2>
   </target>
 
   <target name="build" description="Builds Brunet.Deetoo.dll for release">
