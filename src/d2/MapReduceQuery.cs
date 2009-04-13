@@ -88,23 +88,25 @@ namespace Brunet.Deetoo {
       }
       if (query_type == "exact") {
         string m_result = (string)(my_entry["query_result"]);
-	//string c_result = (string)(value["query_result"]);
+	string c_result = (string)(value["query_result"]);
 	//Console.WriteLine("m_result: {0}, c_result: {1}", m_result, c_result);
+	//if (m_result != null) {
 	if (m_result != null) {
           //Console.WriteLine("m_result is not null");
-	  // if query type is exact matching and current result is not null
+	  // if query type is exact matching and current result is not an empty string, 
 	  // stop searching and return the result immediately.
 	  done = true;
 	}
-	/*
 	else {
 	  if (c_result != null) {
             //Console.WriteLine("c_result is not null");
             done = true;
 	    my_entry["query_result"] = c_result;
 	  }
+	  else {
+            my_entry["query_result"] = null;
+	  }
 	}
-	*/
 	return my_entry;
       }
       else if (query_type == "regex") {
