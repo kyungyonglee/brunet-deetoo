@@ -13,9 +13,10 @@ def main():
   except:
     print usage
     return
+  print 'caching start'
   input_objects = cacheAction(file_name, alpha)
   #time.sleep(1)  #time interval between caching and querying
-  #print 'start query action'
+  print 'start query'
   queryAction(input_objects, file_name, alpha, query_type)
 
 def char_choice():
@@ -60,14 +61,19 @@ def getRandomNode(file_name, query=False):
   if query:
     port = 9846  # port number for query node
     svc = "query" # name of service
-  while (url==0 or net_size==0):
+  #while (url==0 or net_size==0):
+  while (net_size==0):
+    selected_node = nodes[random.randrange(len(nodes))] # select one live node from the list 
+    url = "http://" + selected_node + ":" + str(port) + "/" + svc + "xm.rem"
+    print url
     try:
-      selected_node = nodes[random.randrange(len(nodes))] # select one live node from the list 
-      url = "http://" + selected_node + ":" + str(port) + "/" + svc + "xm.rem"
       rpc = xmlrpclib.Server(url) # ser xmlrpc server
       net_size = rpc.localproxy("mapreduce.NetSize")  # estimated network size (StructuredNode.GetSize)
+      print 'in try: net_size: ', net_size
     except:
+      net_size = 0
       continue
+    print 'in except: net_size: ', net_size
   return rpc, net_size, max_net_size
 
 def cacheAction(c_in_file, alpha):
@@ -82,18 +88,22 @@ def cacheAction(c_in_file, alpha):
   c_ht["task_name"]="Brunet.Deetoo.MapReduceCache"
   print '#time		object	max_size	guesssize	count	depth	response_time\n'
   c_res_file.write('#time		object		max_n	g_size	count	depth	response_time\n')
-  for i in xrange(2):
-    time.sleep(600)
+  for i in xrange(100):
+    #time.sleep(600)
+    print 'new object is about to be inserted'
     rpc, guess_size, max_size = getRandomNode(c_in_file)
     rg_start, rg_end = getRange(guess_size, alpha) #randomly selected range
     input = RStringGenerator() #input object
     c_ht["gen_arg"]=[rg_start,rg_end]
     c_ht["map_arg"]=[input,alpha,rg_start,rg_end]
+    c_ht["mstime"] = 300
     #time.sleep(60)
+    print c_ht
     b_time = time.time()  #current time at caching started
     result = rpc.localproxy("mapreduce.Start",c_ht) #result returns hop_count and tree depth
     a_time = time.time()  #current time at caching finished
     res_time = a_time - b_time  #response time
+    print res_time
     try: # see if mapreduce is timeout, if so, it returns nothing
       count = result['count']
       depth = result['height']
@@ -121,17 +131,19 @@ def queryAction(input_list, q_in_file, alpha, q_type):
   print 'time		object	max_size	guess_size	hit	count	depth	response_time\n'
   q_out_file.write('#time		object		max_n	g_size	hit	count	depth	response_time\n')
   for q in input_list:
-    for it in xrange(2):
+    for it in xrange(100):
       rpc, guess_size, max_size = getRandomNode(q_in_file, True)
       rg_start, rg_end = getRange(guess_size, alpha)
       qht["gen_arg"]=[rg_start,rg_end]
       qht["map_arg"]=[q,q_type]
       qht["reduce_arg"]=q_type
+      qht["mstime"] = 300
       #time.sleep(1800)     #give 30 minutes of suspension between queries
       b_time = time.time()
       result = rpc.localproxy("mapreduce.Start",qht)
       a_time = time.time()
       response_time = a_time - b_time
+      print response_time
       try:
         count = result['count']
         depth = result['height']
