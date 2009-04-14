@@ -70,17 +70,16 @@ def getRandomNode(file_name, query=False):
     try:
       rpc = xmlrpclib.Server(url) # ser xmlrpc server
       net_size = rpc.localproxy("mapreduce.NetSize")  # estimated network size (StructuredNode.GetSize)
-      print 'in try: net_size: ', net_size
+      #print 'in try: net_size: ', net_size
     except:
       net_size = 0
+      #print 'in except: net_size: ', net_size
       continue
-    print 'in except: net_size: ', net_size
   return rpc, net_size, max_net_size
 
 def cacheAction(c_in_file, alpha):
   """ insert 100 random string(lenth=10) into a random node.
       time interval between insertions is 600 sec(10 min)."""
-  
   print '----------caching----------------'
   c_res_file = open("c_res.dat",'w') #caching output file
   c_ht = {} # hashtable for cache
@@ -89,9 +88,9 @@ def cacheAction(c_in_file, alpha):
   c_ht["task_name"]="Brunet.Deetoo.MapReduceCache"
   print '#time		object	max_size	guesssize	count	depth	response_time\n'
   c_res_file.write('#time		object		max_n	g_size	count	depth	response_time\n')
-  for i in xrange(10):
+  for i in xrange(100):
     #time.sleep(600)
-    print 'new object is about to be inserted'
+    #print 'new object is about to be inserted'
     rpc, guess_size, max_size = getRandomNode(c_in_file)
     rg_start, rg_end = getRange(guess_size, alpha) #randomly selected range
     input = RStringGenerator() #input object
@@ -109,7 +108,7 @@ def cacheAction(c_in_file, alpha):
       continue
     a_time = time.time()  #current time at caching finished
     res_time = a_time - b_time  #response time
-    print res_time
+    #print res_time
     count = result['count']
     depth = result['height']
     input_list.append(input)
@@ -131,7 +130,7 @@ def queryAction(input_list, q_in_file, alpha, q_type):
   print 'time		object	max_size	guess_size	hit	count	depth	response_time\n'
   q_out_file.write('#time		object		max_n	g_size	hit	count	depth	response_time\n')
   for q in input_list:
-    for it in xrange(10):
+    for it in xrange(100):
       rpc, guess_size, max_size = getRandomNode(q_in_file, True)
       rg_start, rg_end = getRange(guess_size, alpha)
       qht["gen_arg"]=[rg_start,rg_end]
@@ -148,14 +147,14 @@ def queryAction(input_list, q_in_file, alpha, q_type):
 	continue
       a_time = time.time()
       response_time = a_time - b_time
-      print response_time
+      #print response_time
       count = result['count']
       depth = result['height']
       q_result = result['query_result']
       print 'query_result', q_result
       hit = 0
       if (q_type == 'exact'):
-        if q_result != '':
+        if q_result == q:
           hit = 1
       elif q_type == 'regex':
         if len(q_result) != 0:
