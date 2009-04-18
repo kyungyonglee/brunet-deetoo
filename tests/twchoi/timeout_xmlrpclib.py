@@ -2,7 +2,7 @@ import xmlrpclib, httplib
 
 def Server(url, *args, **kwargs):
    t = TimeoutTransport()
-   t.timeout = kwargs.get('timeout', 30)
+   t.timeout = kwargs.get('timeout', 100)
    if 'timeout' in kwargs:
        del kwargs['timeout']
    kwargs['transport'] = t

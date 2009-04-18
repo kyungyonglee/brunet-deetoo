@@ -26,32 +26,43 @@ using System.Text.RegularExpressions;
 
 namespace Brunet.Deetoo
 {
+  /**
+   <summary>A hashtable contains the data for key:value pair.
+   key = content, value = CacheEntry
+   */
   public class CacheList : IEnumerable {
     //LiskedList<MemBlock> list_of_contents = new LinkedList<MemBlock>();
     protected Hashtable _data = new Hashtable();
     protected Node _node;
     protected RpcManager _rpc;
-    //protected int _count = 0;
+    /// <summary>number of string objects in the table.</summary>
     public int Count { get { return _data.Count; } }
+    /// <summary>The node of this hashtable.</summary>
     public Address Owner { get { return _node.Address; } }
     public Hashtable Data { get { return _data; } }
     /*
-     * CacheList is a set of chached data(For now, data is strings).
+     <summary>Create a new set of chached data(For now, data is strings).</summary>
      * 
      */
     public CacheList(Node node) { 
       _node = node;
       _rpc = RpcManager.GetInstance(node);
+      ///add handler for deetoo data insertion and search.
       _rpc.AddHandler("Deetoo", new DeetooHandler(node,this));
     }
+    /// <summary>need this for iteration</summary>
     public IEnumerator GetEnumerator() {
       IDictionaryEnumerator en = _data.GetEnumerator();
       while(en.MoveNext() ) {
         yield return en.Current;
       }
     }
+
+    /*
+     <summary></summay>Object insertion method.</summary>
+     <param name="ce">A CacheEntry which is inserted to this node.</param>
+     */
     public void Insert(CacheEntry ce) {
-      //Console.WriteLine("*********************************");
       //Console.WriteLine("Insertion is required here at {0}",_node.Address);
       string Key = ce.Content;
       if (!_data.ContainsKey(Key)  ) {
@@ -63,6 +74,13 @@ namespace Brunet.Deetoo
       }
       //Console.WriteLine("_data.Count: {0}", _data.Count);
     }
+    /**
+     <summary>Overrided method for insertion, create new CacheEntry with inputs, then, insert CacheEntry to the CacheList.</summary>
+     <param name="str">Content, this is key of hashtable.<param>
+     <param name="alpha">replication factor.<param>
+     <param name="a">start address of range.<param>
+     <param name="b">end address of range.<param>
+     */
     public void Insert(string str, double alpha, Address a, Address b) {
       //Console.WriteLine("*********************************");
       //Console.WriteLine("Insertion is required here at {0}",_node.Address);
@@ -76,10 +94,10 @@ namespace Brunet.Deetoo
       }
       //Console.WriteLine("_data.Count: {0}", _data.Count);
     }
-    /*
-     * Regular Expression search method
-     * return list of matching strings from CacheList
-     * @pattern regular expression
+    /**
+     <summary>Regular Expression search method.</summary>
+     <return>An array of matching strings from CacheList.</return>
+     <param name = "pattern">A pattern of string one wish to find.</param>
     */
     public ArrayList RegExMatch(string pattern) { 
       ArrayList result = new ArrayList();
@@ -93,9 +111,11 @@ namespace Brunet.Deetoo
       }
       return result;
     }
-    /*
-     * ExactMatch returns matching string in the CacheList.
-     * returns null if no matching string with a given key.
+    /**
+     <summary>Perform an exact match.</summary>
+     <return>A matching string in the CacheList.</return>
+     <param name = "key">A string one wish to find.<param>
+     <remarks>returns null if no matching string with a given key.</remarks>
      */
     public string ExactMatch(string key) {
       string result = null;
@@ -105,19 +125,21 @@ namespace Brunet.Deetoo
       }
       return result;
     } 
-     /*
-     * Stabilize adjusts bounded broadcasting range based on 
-     * current estimated network size.
-     * recalculate range and replace range info with new range on each entry.
+     /**
+      <summary>Recalculate and replace range info for each CacheEntry. 
+      Insert objects from nearest neighbors or remove objects based on 
+      recalculated bounded broadcasting range.</summary>
      */
     public void Stabilize() {
       //Console.WriteLine("In CacheList, ------{0}",_node.Address); 
       foreach (DictionaryEntry dic in _data) {
         string this_key = (string)dic.Key;
 	CacheEntry ce = (CacheEntry)dic.Value;
+	/// Recalculate size of range.
 	BigInteger rg_size = ce.GetRangeSize(_node);
         //Console.WriteLine("{0} key's new range size: {1}",this_key, rg_size);
-	ce.ReCalculateRange(rg_size);
+	/// reassign range info based on recalculated range.
+	ce.ReAssignRange(rg_size);
 	//_data.Remove(this_key);
 	//Console.WriteLine("start: {0}, end: {1}, alpha: {2}",ce.Start,ce.End, ce.Alpha);
 	if (!ce.InRange(_node.Address)) {

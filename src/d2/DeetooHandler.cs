@@ -22,7 +22,6 @@ using System.Collections;
 using System.Collections.Generic;
 
 /**
-\namespace Brunet::Deetoo
 \brief Provides Deetoo caching and querying services using the Brunet P2P infrastructure
  */
 namespace Brunet.Deetoo
@@ -50,7 +49,7 @@ namespace Brunet.Deetoo
     <param name="args">A list of arguments to pass to the method.</param>
     <param name="req_state">The return state sent back to the RpcManager so that it
     knows who to return the result to.</param>
-    <exception>Thrown when there the method is not InsertHandler</exception>
+    <exception>Thrown when there the method is not pre-defined</exception>
     <remark>This handler is registered in CacheList constructor.<\remark>
     */
     public void HandleRpc(ISender caller, string method, IList args, object req_state) {
@@ -100,15 +99,12 @@ namespace Brunet.Deetoo
       //Console.WriteLine("Put is called here at {0}",_node.Address);
       //Console.WriteLine("data size: {0}",_cl.Count);
       if( _cl.Count > 0 ) {
-	//Console.WriteLine("start stabilization");
 	// Before data are transferred, recalculate each object's range
 	// If the node is out of new range, entry will be removed from local list.
         _cl.Stabilize();
-	//Console.WriteLine("-+-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=");
 	//Console.WriteLine("_cl.Count: {0}", _cl.Count);
         foreach(DictionaryEntry de in _cl) {
 	  CacheEntry ce = (CacheEntry)de.Value;
-	  //Console.WriteLine("in Put in foreach this entry : {0}", ce.Content);
           Channel queue = new Channel(1);
 	  queue.CloseAfterEnqueue();
 	  /*
@@ -127,7 +123,6 @@ namespace Brunet.Deetoo
 	    }
 	  };
 	  */
-	  //Console.WriteLine("=================before invoke");
           AHAddress addr = (AHAddress)con.Address;
 	  //Console.WriteLine("new connection: {0}",addr);
           if (ce.InRange(addr) ) {
@@ -144,12 +139,10 @@ namespace Brunet.Deetoo
       }
     }
     /**
-     <summary><\summary>
+     <summary>When this is called from remote ndoe, this node tries to insert an object to CacheList.<\summary>
      <param name="o">The CacheEntry about to be inserted<\param>
      */
     public bool InsertHandler(object o) {
-      //Console.WriteLine("------------------------------------");
-      //Console.WriteLine("Inserthandler is called here");
       CacheEntry ce = (CacheEntry)o;
       //Console.WriteLine("before: {0}", _cl.Count);
       bool result = false;
@@ -188,7 +181,7 @@ namespace Brunet.Deetoo
     protected void ConnectionHandler(object o, EventArgs eargs) {
       ConnectionEventArgs cargs = eargs as ConnectionEventArgs;
       //Console.WriteLine("ConnectionHandler is called here at {0}",_node.Address);
-      Connection old_con = cargs.Connection;
+      //Connection old_con = cargs.Connection;
       ConnectionTable tab = _node.ConnectionTable;
       Connection lc = null, rc = null;
       try {

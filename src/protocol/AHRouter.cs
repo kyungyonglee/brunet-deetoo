@@ -557,7 +557,8 @@ namespace Brunet
            */
           next_con.Edge.Close();
           ConnectionTableChangeHandler(null, null);
-          return this.Route(prev_e, p, out deliverlocally);
+          //return this.Route(prev_e, p, out deliverlocally);
+	  return 0;
         } else {
           /**
            * In the case of a transient problem, we just drop the

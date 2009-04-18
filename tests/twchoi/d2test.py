@@ -34,15 +34,13 @@ def RStringGenerator(length=10):
 def getRange(net_size, alpha):
   """returns start and end of range given replication factor"""
   # size of bounded broadcasting range (=\sqrt(\alpha / net_size) * addr_bin_size)
-  rg = (int)(math.sqrt(alpha / (float)(net_size)) * 2**160)
-  start_addr = 1
-  while start_addr %2 != 0:
+  rg = int(math.sqrt(alpha / float(net_size)) * float(2**160))
+  start_addr = 1  #this means nothing, just assigned some number before a loop
+  while start_addr %2 != 0: #avoid odd number of address
     start_addr = random.randint(0, 2**160-1)
-  end_addr = start_addr + rg
-  start = Address(start_addr)
-  end = Address(end_addr)
-  rg_start = start.str
-  rg_end = end.str
+  end_addr = (start_addr + rg) 
+  rg_start = Address(start_addr).str
+  rg_end = Address(end_addr).str   
   return rg_start, rg_end
 
 def getRandomNode(file_name, query=False):
@@ -138,20 +136,21 @@ def queryAction(input_list, q_in_file, alpha, q_type):
       qht["reduce_arg"]=q_type
       #qht["mstime"] = 300
       #time.sleep(1800)     #give 30 minutes of suspension between queries
-      b_time = time.time()
       try:
+        b_time = time.time()
         result = rpc.localproxy("mapreduce.Start",qht)
+	a_time = time.time()
+        response_time = a_time - b_time
+        #print response_time
+        print result
+        count = result['count']
+        depth = result['height']
+        q_result = result['query_result']
+        print 'query_result', q_result
       except:
 	print "timeout"
 	q_out_file.write("#timed out\n")
 	continue
-      a_time = time.time()
-      response_time = a_time - b_time
-      #print response_time
-      count = result['count']
-      depth = result['height']
-      q_result = result['query_result']
-      print 'query_result', q_result
       hit = 0
       if (q_type == 'exact'):
         if q_result == q:

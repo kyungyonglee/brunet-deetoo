@@ -110,16 +110,6 @@ namespace Brunet {
           ArrayList cons = GetConnectionInfo(this_addr, start_addr, end_addr, structs);
           List<Connection> left_cons =  cons[0] as List<Connection>;
           List<Connection> right_cons = cons[1] as List<Connection>;
-	  /*
-	  //Print out neighbour list after sorting.
-	  if (left_cons.Count != 0) {
-	    PrintConnectionList(left_cons);
-	  }
-	  Console.WriteLine("-------------------------");
-	  if (right_cons.Count !=0) {
-	    PrintConnectionList(right_cons);
-	  }
-	  */
 	  retval = GenerateTreeInRange(this_addr, start_addr, end_addr, left_cons, true, mr_args, timeout);
 	  ArrayList ret_right = GenerateTreeInRange(this_addr, start_addr, end_addr, right_cons, false, mr_args, timeout);
 	  retval.AddRange(ret_right);
@@ -133,11 +123,14 @@ namespace Brunet {
       }
       else { // _node is out of range. Just pass it to the closest to the middle of range.
         retval = GenerateTreeOutRange(start_addr, end_addr, mr_args, timeout);
-        //Console.WriteLine("-----OUT RANGE++++++  ----------");
       }
       return (MapReduceInfo[]) retval.ToArray(typeof(MapReduceInfo));
     }
 
+    /**
+     * Generate tree within the range.
+     * return list of MapReduceInfo
+     */
     private ArrayList GenerateTreeInRange(AHAddress this_addr, AHAddress start, AHAddress end, List<Connection> cons, bool left, MapReduceArgs mr_args, int timeout) {
       //Divide the range and trigger bounded broadcasting again in divided range starting with neighbor.
       //Deivided ranges are (start, n_1), (n_1, n_2), ... , (n_m, end)
@@ -148,7 +141,6 @@ namespace Brunet {
 	AHAddress last = this_addr;
 	//the first element of cons is the nearest.
         for (int i = 0; i < cons.Count; i++) {
-	  //MapReduceInfo mr_info = null;
 	  Connection next_c = (Connection)cons[i];
 	  AHAddress next_addr = (AHAddress)next_c.Address;
 	  ISender sender = (ISender) next_c.Edge;
@@ -196,6 +188,11 @@ namespace Brunet {
       }
       return retval;
     }    
+    /**
+     * When a node is out of the range, this method is called.
+     * This method tries to find the nearest node to the middle of range using greedty algorithm.
+     * return list of MapReduceInfo
+     */
     private ArrayList GenerateTreeOutRange(AHAddress start, AHAddress end, MapReduceArgs mr_args, int timeout) {
       ArrayList retval = new ArrayList();
       BigInteger up = start.ToBigInteger();
@@ -260,6 +257,10 @@ namespace Brunet {
       }    
       return next_closest;
     }
+    /**
+     * Find neighbor connections within the range
+     * return ArrayList of List<Connection> for left and right neighbors.
+     */
     private ArrayList GetConnectionInfo(AHAddress t_addr, AHAddress start, AHAddress end, ConnectionList cl) {
        
       //this node is within the given range (start_addr, end_addr)

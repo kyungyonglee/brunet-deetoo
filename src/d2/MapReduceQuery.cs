@@ -2,7 +2,6 @@
 This program is part of BruNet, a library for the creation of efficient overlay
 networks.
 Copyright (C) 2008 Taewoong Choi <twchoi@ufl.edu> University of Florida  
-                   P. Oscar Boykin <boykin@pobox.com>, University of Florida
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License
@@ -35,6 +34,10 @@ namespace Brunet.Deetoo {
     public MapReduceQuery(Node n, CacheList cl): base(n) {
       _cl = cl;
     }
+    /*
+     * Map method to add CachEntry to CacheList
+     * @param map_arg [pattern, query_type]
+     */
     public override object Map(object map_arg) {
       ArrayList map_args = map_arg as ArrayList;
       string pattern = (string)(map_args[0]);
@@ -57,7 +60,15 @@ namespace Brunet.Deetoo {
       //Console.WriteLine("in map: map_result.count: {0}", my_entry.Count);
       return my_entry;
     }
-    
+      
+    /**
+     * Reduce method
+     * @param reduce_arg argument for reduce
+     * @param current_result result of current map 
+     * @param child_rpc results from children 
+     * @param done if done is true, stop reducing and return result
+     * return table of hop count, tree depth, and query result
+     */  
     public override object Reduce(object reduce_arg, 
                                   object current_result, RpcResult child_rpc,
                                   out bool done) {
@@ -87,10 +98,8 @@ namespace Brunet.Deetoo {
         my_entry["height"] = z; 
       }
       if (query_type == "exact") {
-        string m_result = (string)(my_entry["query_result"]);
-	string c_result = (string)(value["query_result"]);
-	//Console.WriteLine("m_result: {0}, c_result: {1}", m_result, c_result);
-	//if (m_result != null) {
+        string m_result = (string)(my_entry["query_result"]); //current result
+	string c_result = (string)(value["query_result"]); //child result
 	if (m_result != null) {
           //Console.WriteLine("m_result is not null");
 	  // if query type is exact matching and current result is not an empty string, 
@@ -104,6 +113,7 @@ namespace Brunet.Deetoo {
 	    my_entry["query_result"] = c_result;
 	  }
 	  else {
+            //there is no valid result, return null for the entry
             my_entry["query_result"] = null;
 	  }
 	}
@@ -112,7 +122,7 @@ namespace Brunet.Deetoo {
       else if (query_type == "regex") {
         ArrayList q_result = (ArrayList)(my_entry["query_result"]);
         ArrayList c_result = (ArrayList)(value["query_result"]);
-        q_result.AddRange(c_result);
+        q_result.AddRange(c_result); //concatenate current result with child result
         my_entry["query_result"] = q_result;
         return my_entry;
       }

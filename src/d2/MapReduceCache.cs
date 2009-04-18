@@ -21,7 +21,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 using System;
 using System.Collections;
 using System.Collections.Specialized;
-using Brunet;
 
 namespace Brunet.Deetoo {
   /**
@@ -30,7 +29,8 @@ namespace Brunet.Deetoo {
    * BoundedBroadcast is used for tree-generation.
    */ 
   public class MapReduceCache: MapReduceBoundedBroadcast {
-    //Deetoo object, [content, start_range, end_range, replication_factor]
+    //list of Deetoo object in a node, 
+    //[content, start_range, end_range, replication_factor]
     private CacheList _cl;
     private Node _node;
     /*
@@ -41,15 +41,15 @@ namespace Brunet.Deetoo {
       _cl = cl;
     }
     /*
-     * Map method add CachEntry to CacheList
+     * Map method to add CachEntry to CacheList
+     * @param map_arg [content,alpha,start,end]
      */
     public override object Map(object map_arg) {
       ArrayList arg = map_arg as ArrayList;	    
-      //CacheEntry ce = (CacheEntry)arg[0];
       string input = arg[0] as string;
-      double alpha = (double)arg[1];
-      string st = arg[2] as string;
-      string ed = arg[3] as string; 
+      double alpha = (double)arg[1]; //replication factor
+      string st = arg[2] as string;  // start brunet address of range
+      string ed = arg[3] as string;  // end brunet address of range 
       AHAddress a,b;
       try {
         a = (AHAddress)AddressParser.Parse(st);
@@ -63,9 +63,10 @@ namespace Brunet.Deetoo {
       int previous_count = _cl.Count;
       try {
         _cl.Insert(ce);
-	result = 1;
+	//result = 1;
       }
       catch {
+        //insertion failed.
 
       }
       if (_cl.Count > previous_count) { result = 1; }
@@ -76,12 +77,20 @@ namespace Brunet.Deetoo {
       return my_entry;
     }
     
+    /**
+     * Reduce method
+     * @param reduce_arg argument for reduce
+     * @param current_result result of current map 
+     * @param child_rpc results from children 
+     * @param done if done is true, stop reducing and return result
+     * return table of hop count, number of success, tree depth
+     */
     public override object Reduce(object reduce_arg, 
                                   object current_result, RpcResult child_rpc,
                                   out bool done) {
 
       done = false;
-      ISender child_sender = child_rpc.ResultSender;
+      //ISender child_sender = child_rpc.ResultSender;
       //the following can throw an exception, will be handled by the framework
       object child_result = child_rpc.Result;
       
