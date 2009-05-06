@@ -238,7 +238,7 @@ class plab_assistant:
     os.system("mkdir logs/" + node)
     cmd = "/usr/bin/scp -o StrictHostKeyChecking=no " + self.ssh_key + \
       "-o HostbasedAuthentication=no -o CheckHostIP=no " + self.username + \
-      "@" + node + ":/home/" + self.username + "/node/node.log.* logs/" + node + \
+      "@" + node + ":/home/" + self.username + "/ipop/ipop.log.* logs/" + node + \
       "/."
     try:
       ssh_cmd(cmd)

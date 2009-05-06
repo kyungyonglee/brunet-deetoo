@@ -32,12 +32,12 @@ namespace Brunet.Deetoo {
     //list of Deetoo object in a node, 
     //[content, start_range, end_range, replication_factor]
     private CacheList _cl;
-    private Node _node;
+    //private Node _node;
     /*
      * @param cl CacheList object for caching.
      */
     public MapReduceCache(Node n, CacheList cl): base(n) {
-      _node = n;
+      //_node = n;
       _cl = cl;
     }
     /*

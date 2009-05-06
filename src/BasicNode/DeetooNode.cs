@@ -106,6 +106,7 @@ namespace Brunet.Applications {
 	Utils.WriteConfig(q_path, _q_node_config);
       }
       _running = true;
+      //_rpc.AddHandler("Deetoo", new DeetooHandler(node,this));
     }
 
     /**
@@ -263,11 +264,14 @@ namespace Brunet.Applications {
         _c_dht = new Dht(current_node, 3, 20);
         _cs = new CacheList(current_node);
         current_node.MapReduce.SubscribeTask(new MapReduceCache(current_node,_cs));
+        current_node.MapReduce.SubscribeTask(new MapReduceCrawl(current_node));
 	_c_node = current_node;
       }
       else {
         _q_dht = new Dht(current_node, 3, 20);
+	CacheList q_cs = new CacheList(current_node);
         current_node.MapReduce.SubscribeTask(new MapReduceQuery(current_node,_cs));
+        current_node.MapReduce.SubscribeTask(new MapReduceCrawl(current_node));
 	_q_node = current_node;
       }
 

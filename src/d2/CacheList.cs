@@ -21,6 +21,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Text.RegularExpressions;
 //using Brunet.Applications;
 
@@ -32,6 +33,8 @@ namespace Brunet.Deetoo
    */
   public class CacheList : IEnumerable {
     //LiskedList<MemBlock> list_of_contents = new LinkedList<MemBlock>();
+    /// <summary>The log enabler for the dht.</summary>
+    public static BooleanSwitch DeetooLog = new BooleanSwitch("DeetooLog", "Log for Deetoo!");
     protected Hashtable _data = new Hashtable();
     protected Node _node;
     protected RpcManager _rpc;
@@ -63,11 +66,13 @@ namespace Brunet.Deetoo
      <param name="ce">A CacheEntry which is inserted to this node.</param>
      */
     public void Insert(CacheEntry ce) {
-      //Console.WriteLine("Insertion is required here at {0}",_node.Address);
       string Key = ce.Content;
       if (!_data.ContainsKey(Key)  ) {
-	//Console.WriteLine("~~~~~~~~~~~~Inserted!!!!!!!!!!");
         _data.Add(Key,ce);
+	if(CacheList.DeetooLog.Enabled) {
+          ProtocolLog.Write(CacheList.DeetooLog, String.Format(
+            "data {0} added to node {1}", Key, _node.Address));
+        }
       }
       else {
         //Console.WriteLine("An element with Key = {0} already exists.",Key);
@@ -82,15 +87,19 @@ namespace Brunet.Deetoo
      <param name="b">end address of range.<param>
      */
     public void Insert(string str, double alpha, Address a, Address b) {
-      //Console.WriteLine("*********************************");
-      //Console.WriteLine("Insertion is required here at {0}",_node.Address);
       CacheEntry ce = new CacheEntry(str, alpha, a, b);
       if (!_data.ContainsKey(str)) { 
         _data.Add(str,ce);
-	//Console.WriteLine("~~~~~~~~~~~~Inserted!!!!!!!!!!");
+        if(CacheList.DeetooLog.Enabled) {
+          ProtocolLog.Write(CacheList.DeetooLog, String.Format(
+            "data {0} added to node {1}", str, _node.Address));
+	}
       }
       else {
-        //Console.WriteLine("An element with Key = {0} already exists.",str);
+	if(CacheList.DeetooLog.Enabled) {
+          ProtocolLog.Write(CacheList.DeetooLog, String.Format(
+            "node: {1}, An element with Key = {0} already exists.",str, _node.Address));
+	}
       }
       //Console.WriteLine("_data.Count: {0}", _data.Count);
     }
@@ -131,7 +140,10 @@ namespace Brunet.Deetoo
       recalculated bounded broadcasting range.</summary>
      */
     public void Stabilize() {
-      //Console.WriteLine("In CacheList, ------{0}",_node.Address); 
+      if(CacheList.DeetooLog.Enabled) {
+        ProtocolLog.Write(CacheList.DeetooLog, String.Format(
+	  "In node {0}, stabilization is called",_node.Address));
+      }
       foreach (DictionaryEntry dic in _data) {
         string this_key = (string)dic.Key;
 	CacheEntry ce = (CacheEntry)dic.Value;
@@ -139,13 +151,23 @@ namespace Brunet.Deetoo
 	BigInteger rg_size = ce.GetRangeSize(_node);
         //Console.WriteLine("{0} key's new range size: {1}",this_key, rg_size);
 	/// reassign range info based on recalculated range.
+	if(CacheList.DeetooLog.Enabled) {
+        ProtocolLog.Write(CacheList.DeetooLog, String.Format(
+          "---before stabilization, start: {0}, end: {1}", ce.Start, ce.End));
+	}
 	ce.ReAssignRange(rg_size);
-	//_data.Remove(this_key);
-	//Console.WriteLine("start: {0}, end: {1}, alpha: {2}",ce.Start,ce.End, ce.Alpha);
+	if(CacheList.DeetooLog.Enabled) {
+        ProtocolLog.Write(CacheList.DeetooLog, String.Format(
+          "+++after stabilization, start: {0}, end: {1}", ce.Start, ce.End));
+	}
 	if (!ce.InRange(_node.Address)) {
 	  //This node is not in this entry's range. 
 	  //Remove this entry.
           //Console.WriteLine("not mine any more");
+	  if(CacheList.DeetooLog.Enabled) {
+            ProtocolLog.Write(CacheList.DeetooLog, String.Format(
+              "entry {0} needs to be removed", ce.Content));
+	  }
 	  _data.Remove(this_key);
 	}
       } 

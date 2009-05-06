@@ -181,6 +181,10 @@ namespace Brunet.Deetoo
       //BigInteger result = new BigInteger((long)(sqrt_an * Math.Pow(2,160)));
       if (result % 2 == 1) { result += 1; } // make this even number.
       //Console.WriteLine("----new range size: {0}", result);
+      if(CacheList.DeetooLog.Enabled) {
+        ProtocolLog.Write(CacheList.DeetooLog, String.Format(
+          "network size estimation: {0}, new range size: {1}", netsize, result));
+      }
       return result;
     }
     /**
