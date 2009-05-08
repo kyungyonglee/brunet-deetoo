@@ -167,10 +167,11 @@ namespace Brunet.Deetoo
     <summary>Determine size of bounded broadcasting range based on estimated network size.</summary>
     <returns>The range size as b biginteger.</returns>
     */
-    public BigInteger GetRangeSize(Node node) {
-      int netsize = node.NetworkSize;
+    public BigInteger GetRangeSize(Node node, int size) {
+      //int netsize = node.NetworkSize;
       double alpha = this.Alpha;
-      double a_n = alpha / (double)netsize;
+      //double a_n = alpha / (double)netsize;
+      double a_n = alpha / (double)size;
       double sqrt_an = Math.Sqrt(a_n);
       double log_san = Math.Log(sqrt_an,2);
       //Console.WriteLine("net size: {0},alpha: {1}, a/n: {2}, sqrt: {3}, log: {4}",netsize,alpha,a_n, sqrt_an, log_san);
@@ -183,7 +184,7 @@ namespace Brunet.Deetoo
       //Console.WriteLine("----new range size: {0}", result);
       if(CacheList.DeetooLog.Enabled) {
         ProtocolLog.Write(CacheList.DeetooLog, String.Format(
-          "network size estimation: {0}, new range size: {1}", netsize, result));
+          "network size estimation: {0}, new range size: {1}", size, result));
       }
       return result;
     }

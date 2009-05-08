@@ -139,36 +139,40 @@ namespace Brunet.Deetoo
       Insert objects from nearest neighbors or remove objects based on 
       recalculated bounded broadcasting range.</summary>
      */
-    public void Stabilize() {
+    public void Stabilize(int size) {
       if(CacheList.DeetooLog.Enabled) {
         ProtocolLog.Write(CacheList.DeetooLog, String.Format(
 	  "In node {0}, stabilization is called",_node.Address));
       }
+      Console.WriteLine("data size: {0}", _data.Count);
       foreach (DictionaryEntry dic in _data) {
         string this_key = (string)dic.Key;
-	CacheEntry ce = (CacheEntry)dic.Value;
-	/// Recalculate size of range.
-	BigInteger rg_size = ce.GetRangeSize(_node);
+        CacheEntry ce = (CacheEntry)dic.Value;
+        /// Recalculate size of range.
+        BigInteger rg_size = ce.GetRangeSize(_node, size);
         //Console.WriteLine("{0} key's new range size: {1}",this_key, rg_size);
-	/// reassign range info based on recalculated range.
-	if(CacheList.DeetooLog.Enabled) {
-        ProtocolLog.Write(CacheList.DeetooLog, String.Format(
+        /// reassign range info based on recalculated range.
+        if(CacheList.DeetooLog.Enabled) {
+          ProtocolLog.Write(CacheList.DeetooLog, String.Format(
           "---before stabilization, start: {0}, end: {1}", ce.Start, ce.End));
-	}
-	ce.ReAssignRange(rg_size);
-	if(CacheList.DeetooLog.Enabled) {
-        ProtocolLog.Write(CacheList.DeetooLog, String.Format(
+        }
+        ce.ReAssignRange(rg_size);
+        if(CacheList.DeetooLog.Enabled) {
+          ProtocolLog.Write(CacheList.DeetooLog, String.Format(
           "+++after stabilization, start: {0}, end: {1}", ce.Start, ce.End));
-	}
-	if (!ce.InRange(_node.Address)) {
-	  //This node is not in this entry's range. 
-	  //Remove this entry.
+        }
+        if (!ce.InRange(_node.Address)) {
+          Console.WriteLine(" not in the range");
+          //This node is not in this entry's range. 
+          //Remove this entry.
           //Console.WriteLine("not mine any more");
-	  if(CacheList.DeetooLog.Enabled) {
+          if(CacheList.DeetooLog.Enabled) {
             ProtocolLog.Write(CacheList.DeetooLog, String.Format(
-              "entry {0} needs to be removed", ce.Content));
+            "entry {0} needs to be removed", ce.Content));
 	  }
+	  Console.WriteLine("let's remove, data size: {0}", _data.Count);
 	  _data.Remove(this_key);
+	  Console.WriteLine("removed, data size: {0}", _data.Count);
 	}
       } 
     }

@@ -118,7 +118,9 @@ namespace Brunet.Deetoo
       if( _cl.Count > 0 ) {
 	// Before data are transferred, recalculate each object's range
 	// If the node is out of new range, entry will be removed from local list.
-        _cl.Stabilize();
+	Console.WriteLine("~~~~~~~~~~before stabilization~~~~~~~~~~~~");
+        _cl.Stabilize(_network_size);
+	Console.WriteLine("~~~~~~~~~~after stabilization~~~~~~~~~~~~");
         foreach(DictionaryEntry de in _cl) {
 	  CacheEntry ce = (CacheEntry)de.Value;
           Channel queue = new Channel(1);
@@ -147,7 +149,7 @@ namespace Brunet.Deetoo
               _rpc.Invoke(con.Edge,queue,"Deetoo.InsertHandler",ce.Content, ce.Alpha, ce.Start.ToString(), ce.End.ToString());
 	      if(CacheList.DeetooLog.Enabled) {
                 ProtocolLog.Write(CacheList.DeetooLog, String.Format(
-                  "ask node {0} to insert content {1}", addr, ce.Content));
+                  "ask node {0} to insert content {1}, start: {2}, end: {3}", addr, ce.Content, ce.Start, ce.End));
 	      }
 	    }
 	    catch (Exception e){
@@ -163,7 +165,6 @@ namespace Brunet.Deetoo
      */
     public bool InsertHandler(object o) {
       CacheEntry ce = (CacheEntry)o;
-      //Console.WriteLine("before: {0}", _cl.Count);
       bool result = false;
       try {
         _cl.Insert(ce);
@@ -172,8 +173,6 @@ namespace Brunet.Deetoo
       catch {
         throw new Exception("ENTRY_ALREADY_EXISTS");
       }
-      //Console.WriteLine("after: {0}", _cl.Count);
-      //Console.WriteLine("Cache success?????????????? {0}",result);
       return result;
     }
     /**
@@ -199,7 +198,6 @@ namespace Brunet.Deetoo
     */
     protected void ConnectionHandler(object o, EventArgs eargs) {
       ConnectionEventArgs cargs = eargs as ConnectionEventArgs;
-      //Console.WriteLine("ConnectionHandler is called here at {0}",_node.Address);
       //Connection old_con = cargs.Connection;
       ConnectionTable tab = _node.ConnectionTable;
       Connection lc = null, rc = null;
@@ -216,48 +214,40 @@ namespace Brunet.Deetoo
           _left_addr = lc.Address;
         }
         if(Count > 0) {
-	  //Console.WriteLine("PUT+++++++ lc addr: {0}",_left_addr);
           Put(lc); 
         }
       }
-      //Console.WriteLine("1_right_addr: {0}", _right_addr); 
       if(rc != null) {
         if(rc.Address != _right_addr) {
-          //Console.WriteLine("right connection is different");
           _right_addr = rc.Address;
         }
         if(Count > 0) {
-	  //Console.WriteLine("PUT++++   rc addr: {0}",_right_addr);
           Put(rc); 
         }
       }
-      //Console.WriteLine("2rc: {0}", rc.Address); 
     }
     protected void EstimateNetworkLog(object obj, EventArgs eargs) {
       _network_size = _node.NetworkSize; ///original estimation
-      //Console.WriteLine("n_0 is : {0}", _network_size);
       try {
         short logN0 = (short)(Math.Log(_network_size) ); 
 	if (logN0 < 1) { logN0 = 1;}
-	//Console.WriteLine("logN0: {0}", logN0);
         Address target = new DirectionalAddress(DirectionalAddress.Direction.Left); 
         ISender send = new AHSender(_node, target, logN0, AHPacket.AHOptions.Last); ///log N0-hop away node
         Channel queue = new Channel(1);
         _rpc.Invoke(send, queue, "sys:link.Ping",0);
         queue.CloseEvent += delegate(object o, EventArgs args) {
           Channel q = (Channel)o;
-	  RpcResult rres = (RpcResult)q.Dequeue();
-	  AHSender res_sender = (AHSender)rres.ResultSender;
-	  AHAddress remote = (AHAddress)res_sender.Destination; ///this is logN0-hop away node's address
-	  //Console.WriteLine("this address: {0}, remote address: {1}",_node.Address, remote);
-	  AHAddress me = (AHAddress)_node.Address;
-          BigInteger width = me.DistanceTo(remote); ///distance between me and remote node
-          BigInteger inv_density = width / (logN0); ///inverse density
-          BigInteger total = Address.Full / inv_density;  ///new estimation
-          int total_int = total.IntValue();
-          _network_size = total_int;
-	  //_node.NetworkSize = _network_size;
-          //Console.WriteLine("new estimation is : {0}", _network_size);
+	  if (q.Count > 0) {
+	    RpcResult rres = (RpcResult)q.Dequeue();
+	    AHSender res_sender = (AHSender)rres.ResultSender;
+	    AHAddress remote = (AHAddress)res_sender.Destination; ///this is logN0-hop away node's address
+	    AHAddress me = (AHAddress)_node.Address;
+            BigInteger width = me.LeftDistanceTo(remote); ///distance between me and remote node
+            BigInteger inv_density = width / (logN0); ///inverse density
+            BigInteger total = Address.Full / inv_density;  ///new estimation
+            int total_int = total.IntValue();
+            _network_size = total_int;
+	  }
         };
 
       }
@@ -269,38 +259,60 @@ namespace Brunet.Deetoo
     }
     //protected void EstimateNetworkMean(object req_state) {
     protected void EstimateNetworkMean(object obj, EventArgs eargs) {
-      _network_size1 = _network_size;
-      //Console.WriteLine("n_0 is : {0}", _network_size1);
+      //_network_size1 = _network_size;
       ConnectionTable tab = _node.ConnectionTable;
-      //ConnectionList structs = tab.GetConnections(ConnectionType.Structured);
-      ConnectionList structs = tab.GetConnections("structured.shortcut") as ConnectionList;
-      int q_size = structs.Count;
-      Channel queue = new Channel(q_size);
-      foreach(Connection c in structs) {
-        _rpc.Invoke(c.Edge, queue, "Deetoo.estimatelog",0);
+      IEnumerable structs = tab.GetConnections("structured.shortcut");
+      List<Connection> cons = new List<Connection>();
+      foreach (Connection c in structs) {
+        cons.Add(c);
       }
-      queue.CloseEvent += delegate(object o, EventArgs args) {
-        Channel q = (Channel)o;
-	//if (q.Count != 0) {
-	//int sum = 0;
-	int sum = _network_size1;
-	int q_cnt = q.Count;
-	for(int i = 0; i < q_cnt; i++) {
-	  RpcResult rres = (RpcResult)queue.Dequeue();
-	  try {
-            int res = (int)rres.Result;
-	    //Console.WriteLine("neighbor's estimation is {0}", res);
-	    sum += res;
+      int q_size = cons.Count;
+      if (q_size > 0) {
+        Channel queue = new Channel(q_size);
+        foreach(Connection c in structs) {
+          _rpc.Invoke(c.Edge, queue, "Deetoo.estimatelog",0);
+        }
+        queue.CloseEvent += delegate(object o, EventArgs args) {
+          Channel q = (Channel)o;
+	  List<int> size_list = new List<int>();
+	  size_list.Add(_network_size);
+	  //int sum = _network_size1;
+	  int q_cnt = q.Count;
+	  for(int i = 0; i < q_cnt; i++) {
+	    RpcResult rres = (RpcResult)queue.Dequeue();
+	    try {
+              int res = (int)rres.Result;
+	      //sum += res;
+	      size_list.Add(res);
+	    }
+	    catch (Exception e) {
+              Console.WriteLine("{0} Exception caught. couldn't retrieve neighbor's estimation.",e);
+	    }
 	  }
-	  catch (Exception e) {
-            Console.WriteLine("{0} Exception caught. couldn't retrieve neighbor's estimation.",e);
-	  }
-	}
-	int mean_size = sum / (q_cnt);
-	//Console.WriteLine("new estimation: {0}" , mean_size);
-	_network_size1 = mean_size;
-	//_rpc.SendResult(req_state,mean_size);
-      };
+	  int median_size = GetMedian(size_list);
+	  //int mean_size = sum / (q_cnt);
+	  //_network_size1 = mean_size;
+	  _network_size = median_size;
+	  //_rpc.SendResult(req_state,mean_size);
+        };
+      }
+    }
+    protected int GetMedian(List<int> list) {
+      int idx;
+      int median;
+      int size = list.Count;
+      list.Sort();
+      if (size % 2 == 1) {
+        idx = size / 2;
+	median = list[idx];
+      }
+      else {
+        idx = (int)(size / 2);
+	int first = list[idx-1];
+	int second = list[idx];
+	median = (int)( (first + second) / 2);
+      }
+      return median;
     }
   }
 }
