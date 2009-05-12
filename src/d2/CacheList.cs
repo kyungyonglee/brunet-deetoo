@@ -144,7 +144,8 @@ namespace Brunet.Deetoo
         ProtocolLog.Write(CacheList.DeetooLog, String.Format(
 	  "In node {0}, stabilization is called",_node.Address));
       }
-      Console.WriteLine("data size: {0}", _data.Count);
+      //Console.WriteLine("data size: {0}", _data.Count);
+      List<string> to_be_removed = new List<string>();
       foreach (DictionaryEntry dic in _data) {
         string this_key = (string)dic.Key;
         CacheEntry ce = (CacheEntry)dic.Value;
@@ -154,27 +155,32 @@ namespace Brunet.Deetoo
         /// reassign range info based on recalculated range.
         if(CacheList.DeetooLog.Enabled) {
           ProtocolLog.Write(CacheList.DeetooLog, String.Format(
-          "---before stabilization, start: {0}, end: {1}", ce.Start, ce.End));
+          "---range before reassignment, start: {0}, end: {1}", ce.Start, ce.End));
         }
         ce.ReAssignRange(rg_size);
         if(CacheList.DeetooLog.Enabled) {
           ProtocolLog.Write(CacheList.DeetooLog, String.Format(
-          "+++after stabilization, start: {0}, end: {1}", ce.Start, ce.End));
+          "+++range after reassignment, start: {0}, end: {1}", ce.Start, ce.End));
         }
         if (!ce.InRange(_node.Address)) {
-          Console.WriteLine(" not in the range");
+          //Console.WriteLine(" not in the range");
           //This node is not in this entry's range. 
           //Remove this entry.
           //Console.WriteLine("not mine any more");
           if(CacheList.DeetooLog.Enabled) {
             ProtocolLog.Write(CacheList.DeetooLog, String.Format(
-            "entry {0} needs to be removed", ce.Content));
+            "entry {0} needs to be removed from node {1}", ce.Content, _node.Address));
 	  }
-	  Console.WriteLine("let's remove, data size: {0}", _data.Count);
-	  _data.Remove(this_key);
-	  Console.WriteLine("removed, data size: {0}", _data.Count);
+	  to_be_removed.Add(this_key);
+	  //_data.Remove(this_key);
 	}
+      }
+      //Console.WriteLine("let's remove, data size: {0}, # of will-be-removed: {1}", _data.Count, to_be_removed.Count);
+      for (int i = 0; i < to_be_removed.Count; i++) {
+	//Console.WriteLine("to be removed: {0}", to_be_removed[i]);
+        _data.Remove(to_be_removed[i]);
       } 
+      //Console.WriteLine("removed, data size: {0}", _data.Count);
     }
   }
 

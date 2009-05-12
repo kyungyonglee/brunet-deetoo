@@ -78,11 +78,13 @@ namespace Brunet.Deetoo
           result = _network_size;
           //_rpc.SendResult(req_state,result);
 	}
+	/*
 	else if (method == "estimatemean") {
           //EstimateNetworkMean(req_state);
           result = _network_size1;
           //_rpc.SendResult(req_state,result);
 	}
+	*/
 	else {
           throw new Exception("DeetooHandler.Exception: No Handler for method: " + method);
 	}
@@ -118,9 +120,7 @@ namespace Brunet.Deetoo
       if( _cl.Count > 0 ) {
 	// Before data are transferred, recalculate each object's range
 	// If the node is out of new range, entry will be removed from local list.
-	Console.WriteLine("~~~~~~~~~~before stabilization~~~~~~~~~~~~");
         _cl.Stabilize(_network_size);
-	Console.WriteLine("~~~~~~~~~~after stabilization~~~~~~~~~~~~");
         foreach(DictionaryEntry de in _cl) {
 	  CacheEntry ce = (CacheEntry)de.Value;
           Channel queue = new Channel(1);
