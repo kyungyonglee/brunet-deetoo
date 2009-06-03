@@ -45,7 +45,11 @@ namespace Brunet.Deetoo
     public int Count { get { return _cl.Count; } }
     protected int _local_network_size;
     protected int _median_network_size;
-    //public int NetworkSize { get { return _network_size; } } 
+    //protected int _network_size;
+    //public int NetworkSize { 
+    //  get { return _network_size; } 
+    //  set { _network_size = value; }
+    //} 
     //protected readonly object _sync;
     protected bool flag = false;
     /**
@@ -76,6 +80,7 @@ namespace Brunet.Deetoo
 	}
 	else if (method == "getestimatedsize") {
           result = _local_network_size;
+          //result = _network_size;
           //_rpc.SendResult(req_state,result);
 	}
 	else if (method == "medianestimatedsize") {
@@ -83,6 +88,11 @@ namespace Brunet.Deetoo
           result = _median_network_size;
           //_rpc.SendResult(req_state,result);
 	}
+	/*
+	else if (method == "updatenetworksize") {
+          NetworkSize = (int)(args[0]);
+	}
+	*/
 	else {
           throw new Exception("DeetooHandler.Exception: No Handler for method: " + method);
 	}
@@ -101,11 +111,14 @@ namespace Brunet.Deetoo
       _node = node;
       _rpc = RpcManager.GetInstance(node);
       _cl = cl;
-      node.ConnectionTable.ConnectionEvent += this.ConnectionHandler;
+      //NetworkSize = _node.NetworkSize;
+      _local_network_size = _node.NetworkSize;
+      _median_network_size = _node.NetworkSize;
       node.ConnectionTable.ConnectionEvent += this.GetEstimatedSize;
       node.ConnectionTable.DisconnectionEvent += this.GetEstimatedSize;
       node.ConnectionTable.ConnectionEvent += this.GetMedianEstimation;
       node.ConnectionTable.DisconnectionEvent += this.GetMedianEstimation;
+      node.ConnectionTable.ConnectionEvent += this.ConnectionHandler;
       //_rpc.AddHandler("Deetoo", this);
     }
     /**
@@ -121,6 +134,7 @@ namespace Brunet.Deetoo
 	// Before data are transferred, recalculate each object's range
 	// If the node is out of new range, entry will be removed from local list.
         _cl.Stabilize(_median_network_size);
+        //_cl.Stabilize(_network_size);
         foreach(DictionaryEntry de in _cl) {
 	  CacheEntry ce = (CacheEntry)de.Value;
           Channel queue = new Channel(1);
